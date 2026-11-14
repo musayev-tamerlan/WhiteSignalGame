@@ -2,7 +2,7 @@ import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
 import { canStandAt } from '../systems/movement';
 import { freshSave, loadSave } from '../systems/save';
-import { archive } from '../systems/progress';
+import { archive, milestones } from '../systems/progress';
 import type { Area } from './expedition-layout';
 import { walkAreas } from './layout';
 import type { Save } from '../systems/save';
@@ -118,4 +118,20 @@ test('an older radio checkpoint unlocks the new crew quarters objective', () => 
     if (previousStorage) Object.defineProperty(globalThis, 'localStorage', previousStorage);
     else Reflect.deleteProperty(globalThis, 'localStorage');
   }
+});
+
+test('the roll call only appears once all three earlier traces are archived', () => {
+  const roll = hotspots.find(spot => spot.id === 'roll')!;
+  const save: Save = { ...freshSave(), level: 'coast', ending: 'seal', progress: ['reverse', 'coastLog'], evidence: ['tally', 'sled'] };
+  assert.equal(available(save, roll), false);
+  save.evidence.push('chairs');
+  assert.equal(available(save, roll), true);
+});
+
+test('a checkpoint that already has the lift badge skips the survey flags', () => {
+  const before = milestones.slice(0, milestones.indexOf('triangulated') + 1);
+  const save: Save = { ...freshSave(), level: 'crevasse', progress: [...before, 'recorder', 'echo'] };
+  assert.equal(currentObjective(save).target, 'override');
+  save.progress = [...before, 'recorder'];
+  assert.equal(currentObjective(save).target, 'flags');
 });

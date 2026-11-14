@@ -28,6 +28,8 @@ export interface Hotspot extends GroundPoint {
   needsLight?: boolean;
   /** Only available after the Borehole Nine choice; a specific ending narrows it to that outcome. */
   afterEnding?: Ending | true;
+  /** Optional evidence that must already be archived, for clue chains across areas. */
+  requiresEvidence?: ArchiveId[];
 }
 
 const backToStation = (point: GroundPoint) => ({ area: 'outside' as const, point });
@@ -138,6 +140,7 @@ export const hotspots: Hotspot[] = [
     ],
   }),
   event('annex', 'service', 'Read the maintenance bulletin', 8.2, 2.3, { record: 'service' }),
+  event('annex', 'tally', 'Inspect the scratched generator', 9.9, -2.6, { record: 'tally' }),
   event('outside', 'ridge-trail', 'Follow the ridge trail', 28, -10, { requires: ['dispatch'], destination: destination('ridge') }),
   event('ridge', 'ridge-return', 'Return to station yard', -29, 13, { destination: backToStation({ x: 27, z: -9 }) }),
   event('ridge', 'west', 'Calibrate west relay', -23, -9.6, {
@@ -177,13 +180,21 @@ export const hotspots: Hotspot[] = [
   event('crevasse', 'recorder', 'Recover Mara’s recorder', -16, 5.9, {
     proof: 'recorder',
     lines: [
-      ['MARA · FIELD RECORDING', 'The chamber transmits three tones, low, high, middle. We used the reverse sequence to make it go quiet.'],
+      ['MARA · FIELD RECORDING', 'The chamber transmits three tones. We used the reverse sequence to make it go quiet. I painted the order on the survey flags south of the trench, in case I stopped trusting my memory.'],
       ['MARA · FIELD RECORDING', 'I stashed the lift badge at the emergency receiver farther down the trench. If you get stuck, stand by the heater until the white patches leave your vision.'],
+      ['VOSS', 'The flags will be hard to read in this light. The figures turn toward a lit flashlight, so I should switch it on only when I get there.'],
+    ],
+  }),
+  event('crevasse', 'flags', 'Read the survey flags', 2, 16, {
+    requires: ['recorder'], proof: 'flags', needsLight: true,
+    lines: [
+      ['SURVEY FLAGS', 'Three flags, each painted with one word: LOW, HIGH, MIDDLE. A fourth pole is bare, as if its flag was pulled up and carried away.'],
+      ['VOSS', 'Low, high, middle. Mara reversed that sequence to quiet the chamber.'],
     ],
   }),
   event('crevasse', 'echo', 'Decode the emergency receiver', 1, -.75, {
-    requires: ['recorder'], proof: 'echo',
-    puzzle: { title: 'Echo lock', hint: 'Reverse the three tones in Mara’s recording. Each labeled button also plays its pitch if sound is on.', choices: ['Low', 'Middle', 'High'], answer: [1, 2, 0], feedback: 'prefix' },
+    requires: ['recorder', 'flags'], proof: 'echo',
+    puzzle: { title: 'Echo lock', hint: 'Reverse the three tones painted on the survey flags. Each labeled button also plays its pitch if sound is on.', choices: ['Low', 'Middle', 'High'], answer: [1, 2, 0], feedback: 'prefix' },
     lines: [['EMERGENCY RECEIVER', 'Badge returned. Authorization valid for one lift descent.'], ['VOSS', 'The badge has my photo. The name underneath is Mara’s.']],
   }),
   event('crevasse', 'override', 'Release the borehole lift', 16, 2.9, {
@@ -192,6 +203,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('crevasse', 'cassette', 'Listen to the loose cassette', -3, -13, { record: 'cassette' }),
   event('crevasse', 'map', 'Unfold the relief map', 23, 11, { record: 'map' }),
+  event('crevasse', 'sled', 'Search the abandoned sled', -22, -15, { record: 'sled' }),
   event('crevasse', 'coast-road', 'Follow the erased road to the coast', -27, -16, { afterEnding: true, destination: destination('coast') }),
   event('crevasse', 'lift', 'Take the lift to Borehole Nine', 26, -13, { requires: ['override'], destination: destination('borehole') }),
   event('borehole', 'lift-return', 'Take the lift back to the crevasse', -13, 8.4, { destination: { area: 'crevasse', point: { x: 24, z: -13 } } }),
@@ -234,6 +246,7 @@ export const hotspots: Hotspot[] = [
     radius: 1.65, requires: ['reverse'], finale: true,
   }),
   event('borehole', 'letter', 'Read the unsent letter', 10, 3.45, { record: 'letter' }),
+  event('borehole', 'chairs', 'Look at the folding chairs', -1.5, 1.5, { record: 'chairs' }),
   event('coast', 'coast-return', 'Follow the road back to the crevasse', -29.5, 16.5, { destination: { area: 'crevasse', point: { x: -25.5, z: -14.5 } } }),
   coastLog('seal', [
     ['COAST LOG · AUG 17', '03:15. Kestrel carrier dropped. First silence on 87.6 MHz in three days.'],
@@ -260,6 +273,9 @@ export const hotspots: Hotspot[] = [
       ['ILSE · TAPED NOTE', 'Mast lamps from the top: red, white, green. The echo climbs the mast, so starve it from below. Bottom feed first, then the top. The middle goes last.'],
       ['ILSE · TAPED NOTE', 'If anyone calls the hut using a crew name, ask Mara’s question. She told me on the 14th: “Ask what I called the dog. I never had a dog.”'],
     ],
+  }),
+  event('coast', 'roll', 'Read the Kestrel roll call', 14.5, -9.6, {
+    afterEnding: true, requires: ['coastLog'], requiresEvidence: ['tally', 'sled', 'chairs'], record: 'roll',
   }),
   event('coast', 'suit', 'Search the survival suit', -16.6, -9.6, { afterEnding: true, requires: ['feedKey'], record: 'tag' }),
   event('coast', 'mast', 'Cut the mast lamp feeds', 4, 12.4, {
@@ -293,6 +309,7 @@ export function matchesEnding(save: Save, hotspot: Hotspot) {
 export function available(save: Save, hotspot: Hotspot) {
   if (!matchesEnding(save, hotspot)) return false;
   if (hotspot.record && save.evidence.includes(hotspot.record)) return false;
+  if (hotspot.requiresEvidence?.some(id => !save.evidence.includes(id))) return false;
   if (hotspot.proof && hotspot.proof !== 'heard' && has(save, hotspot.proof)) return false;
   if (hotspot.finale && save.ending) return false;
   return hotspot.requires?.every(flag => has(save, flag)) ?? true;
@@ -309,6 +326,7 @@ const objectives: [Milestone, string, string][] = [
   ['dispatch', 'Read the network dispatch', 'dispatch'],
   ['triangulated', 'Locate the source of the repeating signal', 'receiver'],
   ['recorder', 'Recover Mara’s field recorder', 'recorder'],
+  ['flags', 'Find the survey flags south of the trench and read them by flashlight', 'flags'],
   ['echo', 'Decode the emergency receiver to claim the lift badge', 'echo'],
   ['override', 'Release the borehole lift', 'override'],
   ['depth', 'Find the depth of the first reply', 'depth'],
@@ -334,7 +352,8 @@ export function currentObjective(save: Save) {
     return { text: 'Expedition complete · Explore for remaining evidence', target: '' };
   }
   for (const [flag, text, target] of objectives) {
-    if (has(save, flag)) continue;
+    // Checkpoints from before the survey flags existed may already have the badge.
+    if (has(save, flag) || flag === 'flags' && has(save, 'echo')) continue;
     if (flag === 'triangulated') {
       const missing = (['west', 'center', 'east'] as const).filter(relay => !has(save, relay));
       if (missing.length) return { text: `Calibrate the ridge relays (${3 - missing.length}/3)`, target: missing[0] };
