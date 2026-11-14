@@ -55,7 +55,8 @@ export class Voice {
     speechSynthesis.speak(utterance);
   }
 
+  /** Always cancels: some browsers report `speaking` late, which let a line run on. */
   stop() {
-    if (this.available && (speechSynthesis.speaking || speechSynthesis.pending)) speechSynthesis.cancel();
+    if (this.available) speechSynthesis.cancel();
   }
 }
