@@ -1,21 +1,99 @@
+type Surface = 'snow' | 'floor';
+
 export class AudioSystem {
-  context?: AudioContext; master?: GainNode; muted = true; radio?: OscillatorNode;
+  private context?: AudioContext;
+  private master?: GainNode;
+  private wind?: GainNode;
+  private crunch?: AudioBuffer;
+  private snowy = true;
+  muted = true;
+
   start() {
-    if (this.context) { void this.context.resume(); return; }
-    this.context = new AudioContext(); const ctx = this.context;
-    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : .18; this.master.connect(ctx.destination);
+    if (this.context) {
+      if (this.context.state === 'suspended') void this.context.resume().catch(() => {});
+      return;
+    }
+    if (!window.AudioContext) return;
+    let ctx: AudioContext;
+    try { ctx = new AudioContext(); } catch { return; }
+    this.context = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = this.muted ? 0 : .28;
+    this.master.connect(ctx.destination);
+
     const buffer = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
-    const data = buffer.getChannelData(0); for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*.45;
-    const noise=ctx.createBufferSource(); noise.buffer=buffer; noise.loop=true;
-    const filter=ctx.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=420;
-    noise.connect(filter); filter.connect(this.master); noise.start();
+    const wind = buffer.getChannelData(0);
+    for (let i = 0; i < wind.length; i++) wind[i] = (Math.random() * 2 - 1) * .34;
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 370;
+    this.wind = ctx.createGain();
+    this.wind.gain.value = this.snowy ? .46 : .07;
+    source.connect(filter).connect(this.wind).connect(this.master);
+    source.start();
+
+    this.crunch = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .23), ctx.sampleRate);
+    const grains = this.crunch.getChannelData(0);
+    let pressure = 0;
+    for (let i = 0; i < grains.length; i++) {
+      if (Math.random() < .034) pressure += Math.random() * .48;
+      pressure *= .967;
+      grains[i] = (Math.random() * 2 - 1) * (.25 + pressure);
+    }
   }
-  toggle() { this.muted=!this.muted; this.start(); if(this.master) this.master.gain.setTargetAtTime(this.muted?0:.18,this.context!.currentTime,.2); }
-  beep(frequency=660) {
-    if (!this.context || !this.master) return;
-    const o=this.context.createOscillator(), g=this.context.createGain(), t=this.context.currentTime;
-    o.type='sine'; o.frequency.value=frequency; g.gain.setValueAtTime(.3,t); g.gain.exponentialRampToValueAtTime(.001,t+.18);
-    o.connect(g); g.connect(this.master); o.start(); o.stop(t+.2);
+
+  surface(snowy: boolean) {
+    this.snowy = snowy;
+    if (this.wind && this.context) this.wind.gain.setTargetAtTime(snowy ? .46 : .07, this.context.currentTime, .35);
   }
-  pause(paused:boolean) { if(this.context) void (paused?this.context.suspend():this.context.resume()); }
+
+  toggle() {
+    this.muted = !this.muted;
+    this.start();
+    if (this.master && this.context) this.master.gain.setTargetAtTime(this.muted ? 0 : .28, this.context.currentTime, .15);
+  }
+
+  step(surface: Surface, force: number, landing = false) {
+    const { context: ctx, master, crunch } = this;
+    if (!ctx || !master || !crunch || this.muted || ctx.state !== 'running') return;
+    const t = ctx.currentTime;
+    const snow = surface === 'snow';
+    const noise = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    noise.buffer = crunch;
+    noise.playbackRate.value = (snow ? .86 : 1.34) + Math.random() * .32;
+    filter.type = snow ? 'bandpass' : 'lowpass';
+    filter.frequency.value = snow ? 1350 + Math.random() * 480 : 510;
+    filter.Q.value = snow ? .60 : .8;
+    gain.gain.setValueAtTime(.001, t);
+    gain.gain.exponentialRampToValueAtTime((snow ? .65 : .47) * force, t + .012);
+    gain.gain.exponentialRampToValueAtTime(.001, t + (snow ? .17 : .075));
+    noise.connect(filter).connect(gain).connect(master);
+    noise.start(t);
+    if (landing || !snow) this.tone(landing ? 70 : 100 + Math.random() * 24, .065, .12 * force);
+  }
+
+  beep(frequency = 660) { this.tone(frequency, .18, .24); }
+
+  private tone(frequency: number, length: number, volume: number) {
+    if (!this.context || !this.master || this.muted) return;
+    const ctx = this.context;
+    const t = ctx.currentTime;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, t);
+    gain.gain.exponentialRampToValueAtTime(.001, t + length);
+    oscillator.connect(gain).connect(this.master);
+    oscillator.start();
+    oscillator.stop(t + length + .01);
+  }
+
+  pause(paused: boolean) {
+    if (this.context) void (paused ? this.context.suspend() : this.context.resume()).catch(() => {});
+  }
 }

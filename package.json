@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --import tsx src/systems/movement.test.ts"
+    "test": "node --import tsx --test src/systems/*.test.ts src/world/*.test.ts"
   },
   "dependencies": {
     "three": "^0.180.0"

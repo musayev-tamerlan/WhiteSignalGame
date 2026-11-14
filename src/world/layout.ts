@@ -1,4 +1,5 @@
 import type { WalkArea } from '../systems/movement';
+import { expedition, outbuildings, type Area } from './expedition-layout';
 
 export const station = {
   building: { x: 8.5, z: -5.5, width: 13, depth: 7 },
@@ -20,11 +21,16 @@ export const radioRoom = {
   bench: { x: -6.5, z: -0.3, width: 1.55, depth: 3.25 },
 };
 
-export const walkAreas: Record<'inside' | 'outside', WalkArea> = {
+export const walkAreas: Record<Area, WalkArea> = {
   outside: {
-    minX: -16, maxX: 24, minZ: -12, maxZ: 15,
-    obstacles: [station.building, ...station.crates],
+    minX: -24, maxX: 32, minZ: -16, maxZ: 21,
+    obstacles: [station.building, ...station.crates, ...outbuildings],
   },
+  quarters: expedition.quarters.walk,
+  annex: expedition.annex.walk,
+  ridge: expedition.ridge.walk,
+  crevasse: expedition.crevasse.walk,
+  borehole: expedition.borehole.walk,
   inside: {
     minX: -7.5, maxX: 7.5, minZ: -4.55, maxZ: 4.55,
     obstacles: [radioRoom.desk, radioRoom.rack, radioRoom.bench],

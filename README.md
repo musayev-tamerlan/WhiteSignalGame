@@ -1,6 +1,10 @@
 # The White Signal
 
-A browser-based isometric survival mystery. Antarctica, 1987. Three.js, TypeScript, Vite; no backend or game engine dependency.
+A browser-based isometric survival mystery. Antarctica, 1987. Built with Three.js, TypeScript, and Vite.
+
+[Play The White Signal](https://paladium.github.io/WhiteSignalGame/) · [Game design and campaign walkthrough](docs/GAME_DESIGN.md) · [Developer handoff](docs/HANDOFF.md) · [Art, audio, and screenshots](docs/ASSETS.md)
+
+![Isometric Kestrel Station](docs/images/expedition-preview.jpg)
 
 ## Run
 
@@ -14,7 +18,7 @@ npm run dev
 Open the printed local URL (normally http://localhost:5173). For a phone on the same network, open the printed Network URL; allow the development server through the firewall if needed.
 
 ```sh
-npm test       # movement, jump, world bounds, timestep behavior
+npm test       # movement, field hazards, objective routing, checkpoint compatibility
 npm run build # TypeScript check and production bundle
 npm run preview # serve production build locally
 ```
@@ -30,30 +34,37 @@ Deploy the `dist/` directory to any static host. No environment variables or bac
 - E/Enter: interact / advance transmission
 - J: field notes
 - Escape: pause
-- Sound button: enable synthesized wind and radio tones (starts muted)
+- M: expedition map and current route
+- Sound button: mute or restore footsteps, wind, and clue tones. Audio starts on your first input.
 
-Touch controls appear on phones/tablets and narrow screens. Hold the directional pad to move, RUN to sprint, ⤒ to jump, ☀ for flashlight; the context action changes to ENTER / EXIT / USE / NEXT. Rotate to landscape for a wider view.
+Touch controls appear on phones, tablets, and narrow screens. Hold the directional pad to move, RUN to sprint, and ⤒ to jump. For puzzles, tap an answer or press its number on the keyboard.
 
-Follow the packed snow and amber marker to the station door. Enter, approach the green radio terminal, and advance the mysterious transmission. The ending records a new field note and objective; further investigation is beyond this prologue.
+Follow the amber marker to the radio room and listen to the transmission. The journey continues through seven connected areas, including the crew quarters, power annex, relay ridge, glacier trench, and Borehole Nine. Field Notes preserves the clues you’ll need for later puzzles.
 
-Checkpoints from the earlier side-scrolling version restore on a clear part of the map. Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Prologue in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
+Running and using the flashlight can give away your position around the figures. Rewarm and set a recovery point at heated beacons. Sprint and jump across yellow-striped thin ice, or take the longer route around it. Cracking ice, whiteouts, and encounters send you back to the last beacon with your discoveries intact.
+
+The five chapters, eight optional discoveries, and two possible endings are designed around a roughly 30-minute first playthrough. Actual playtime depends on exploration and puzzle solving. The ending screen reports active time.
+
+Checkpoints from the earlier side-scrolling version restore on a clear part of the map. Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Expedition in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
 
 ## Structure
 
-- `src/main.ts`: game lifecycle, fixed 60 Hz loop, state, interaction/dialogue flow
+- `src/main.ts`: game lifecycle, fixed 60 Hz loop, checkpoint state, interaction and dialogue
 - `src/world/levels.ts`: outdoor station, ice ridges, cutaway radio room, batched snow particles
 - `src/world/layout.ts`: shared landmarks, walkable areas, and collision footprints
 - `src/systems/movement.ts`: deterministic movement and collision bounds
 - `src/systems/character.ts`: original procedural pixel sprite and animation
 - `src/systems/camera.ts`: isometric orthographic camera, responsive framing, smooth follow
 - `src/systems/input.ts`: keyboard and multi-pointer mobile input
-- `src/systems/audio.ts`: opt-in synthesized wind and radio cues
+- `src/world/story.ts`: objectives, clues, puzzles, area connections, and endings
+- `src/systems/field.ts`: warmth, thin ice, figure behavior, and beacon recovery
+- `src/systems/audio.ts`: synthesized snow and floor footsteps, wind, and radio cues
 - `src/systems/save.ts`: validated, versioned local saves
 - `src/ui.ts`, `src/style.css`: responsive HUD, journal, menus, controls
 
 The supplied character sheet is a visual reference, not a transparent, frame-aligned game atlas. This slice uses original code-drawn pixel art reflecting its dark expedition suit and orange trim. No text or embedded instructions from the reference are treated as project requirements. Environment geometry, effects, and audio are procedural placeholders.
 
-Rendering caps device pixel ratio at 1.75. Snow is a single Points draw call; static station details are instanced by material and geometry/materials are shared, no real-time shadows or postprocessing passes are used. Rendering uses WebGL with an explanatory fallback when unavailable. This first slice has atmospheric survival presentation, not hunger/combat/death systems.
+Rendering caps device pixel ratio at 1.75. Snow is a single Points draw call; static station details are instanced by material and geometry/materials are shared, no real-time shadows or postprocessing passes are used. Rendering uses WebGL with an explanatory fallback when unavailable. The expedition uses non-combat hazards and recovery at heated beacons.
 
 ## GitHub Pages
 

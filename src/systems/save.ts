@@ -1,41 +1,48 @@
 import { radioRoom, station, walkAreas } from '../world/layout';
+import { expedition, expeditionAreas, type Area } from '../world/expedition-layout';
 import { canStandAt, type GroundPoint } from './movement';
+import { archive, milestones, type ArchiveId, type Ending, type Milestone } from './progress';
 
 export interface Save extends GroundPoint {
-  level: 'outside' | 'inside';
-  heard: boolean;
+  level: Area;
   flashlight: boolean;
+  progress: Milestone[];
+  evidence: ArchiveId[];
+  ending?: Ending;
+  elapsed: number;
 }
 
 const KEY = 'the-white-signal:v1';
+const areas: readonly Area[] = ['outside', 'inside', ...expeditionAreas];
 
 export const freshSave = (): Save => ({
-  level: 'outside',
-  ...station.spawn,
-  heard: false,
-  flashlight: true,
+  level: 'outside', ...station.spawn, flashlight: true, progress: [], evidence: [], elapsed: 0,
 });
 
 export function loadSave(): Save {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (saved && (saved.level === 'outside' || saved.level === 'inside') &&
-        Number.isFinite(saved.x) && typeof saved.heard === 'boolean') {
-      const level: Save['level'] = saved.level;
-      const spawn = level === 'inside' ? radioRoom.spawn : station.spawn;
-      const area = walkAreas[level];
-      const x = Math.max(area.minX, Math.min(area.maxX, saved.x));
-      // Older checkpoints only recorded X. Restore them on the clear approach or room aisle.
-      const z = Number.isFinite(saved.z)
-        ? Math.max(area.minZ, Math.min(area.maxZ, saved.z))
-        : spawn.z;
-      const position = canStandAt(x, z, area) ? { x, z } : spawn;
-      return { level, ...position, heard: saved.heard, flashlight: saved.flashlight !== false };
-    }
+    if (!saved || !areas.includes(saved.level) || !Number.isFinite(saved.x)) return freshSave();
+    const level: Area = saved.level;
+    const spawn = level === 'inside' ? radioRoom.spawn
+      : level === 'outside' ? station.spawn : expedition[level].spawn;
+    const area = walkAreas[level];
+    const x = Math.max(area.minX, Math.min(area.maxX, saved.x));
+    const z = Number.isFinite(saved.z) ? Math.max(area.minZ, Math.min(area.maxZ, saved.z)) : spawn.z;
+    const position = canStandAt(x, z, area) ? { x, z } : spawn;
+    const progress = milestones.filter(flag => Array.isArray(saved.progress) && saved.progress.includes(flag) ||
+      flag === 'heard' && saved.heard === true);
+    const evidence = (Object.keys(archive) as ArchiveId[]).filter(id =>
+      Array.isArray(saved.evidence) && saved.evidence.includes(id));
+    const ending = progress.includes('reverse') && (saved.ending === 'seal' || saved.ending === 'send')
+      ? saved.ending : undefined;
+    return {
+      level, ...position, flashlight: saved.flashlight !== false, progress, evidence, ending,
+      elapsed: Number.isFinite(saved.elapsed) ? Math.max(0, saved.elapsed) : 0,
+    };
   } catch {
-    // Storage can be unavailable in private browsing.
+    return freshSave();
   }
-  return freshSave();
 }
 
 export function saveGame(save: Save) {

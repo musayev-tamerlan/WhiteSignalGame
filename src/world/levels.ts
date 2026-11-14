@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { radioRoom, station } from './layout';
+import { expedition, expeditionAreas, heaters, outbuildings, thinIce, type Area, type ExpeditionArea } from './expedition-layout';
+import { hotspots } from './story';
 const materials = new Map<string,THREE.MeshStandardMaterial>();
 function mat(color:string,glow=false) {
  const key=color+glow; if(!materials.has(key)) materials.set(key,new THREE.MeshStandardMaterial({color,roughness:.93,emissive:glow?color:0,emissiveIntensity:glow?.65:0})); return materials.get(key)!;
@@ -41,8 +43,117 @@ function lamp(g:THREE.Group,x:number,y:number,z:number) {
  const c=document.createElement('canvas');c.width=c.height=64;const ctx=c.getContext('2d')!,grad=ctx.createRadialGradient(32,32,1,32,32,32);grad.addColorStop(0,'rgba(255,174,92,.35)');grad.addColorStop(1,'rgba(255,174,92,0)');ctx.fillStyle=grad;ctx.fillRect(0,0,64,64);
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthWrite:false,blending:THREE.AdditiveBlending}));sprite.position.set(x,y,z+.4);sprite.scale.set(3,3,1);g.add(sprite);
 }
+function floorSign(group: THREE.Group, text: string, x: number, z: number, width = 2.8) {
+ const sign = label(group, text, x, .062, z, width, '#f3c58b', '#233a45');
+ sign.rotation.x = -Math.PI / 2;
+}
+
+function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
+ const config = expedition[area];
+ const width = config.walk.maxX - config.walk.minX + 1;
+ const depth = config.walk.maxZ - config.walk.minZ + 1;
+ const outdoor = config.snow;
+ box(group, 0, -.38, 0, width + (outdoor ? 24 : .4), .76, depth + (outdoor ? 24 : .4),
+  outdoor ? area === 'ridge' ? '#758c9b' : '#536f83' : '#526368');
+
+ if (outdoor) {
+  for (let i = 0; i < 9; i++) {
+   iceRidge(group, -width / 2 + i * 9, -depth / 2 - 5 + Math.sin(i) * 2, 12, 5 + i % 4, 9);
+  }
+  for (const point of heaters[area === 'ridge' ? 'ridge' : 'crevasse']) {
+   box(group, point.x, .04, point.z, 3.1, .08, 3.1, '#86634d');
+   box(group, point.x, .72, point.z - .85, 1.35, 1.4, .78, '#853f2d');
+   box(group, point.x, .76, point.z - .44, 1.1, .39, .06, '#ff9d43', true);
+   const glow = new THREE.PointLight('#ff9d55', 20, 7);
+   glow.position.set(point.x, 1.35, point.z - .15);
+   group.add(glow);
+   floorSign(group, 'HEAT', point.x, point.z + .95, 1.65);
+  }
+  if (area === 'crevasse') for (const sheet of thinIce) {
+   box(group, sheet.x, .015, sheet.z, sheet.width, .03, sheet.depth, '#447383');
+   const borders = [sheet.x - sheet.width / 2, sheet.x + sheet.width / 2];
+   for (const x of borders) for (let z = sheet.z - sheet.depth / 2; z <= sheet.z + sheet.depth / 2; z += .8) {
+    box(group, x, .039, z, .11, .03, .46, '#e9b465');
+   }
+  }
+ } else {
+  box(group, 0, 1.85, -depth / 2, width + .3, 3.7, .24, '#263a44');
+  box(group, -width / 2, 1.85, 0, .24, 3.7, depth, '#31454e');
+  box(group, 0, 3.74, -depth / 2, width + .45, .13, .37, '#9c835f');
+  box(group, -width / 2, 3.74, 0, .37, .13, depth, '#9c835f');
+  for (let x = -width / 2 + 1; x < width / 2; x += 1.3) {
+   box(group, x, 1.82, -depth / 2 + .15, .08, 3.55, .07, '#5b6a6a');
+   box(group, x, .007, 0, .023, .015, depth, '#37464e');
+  }
+  for (let z = -depth / 2 + .8; z < depth / 2; z += 1.3) box(group, 0, .008, z, width, .015, .023, '#37464e');
+  for (const x of [-width / 3, 0, width / 3]) lamp(group, x, 3.15, -depth / 2 + .17);
+  label(group, config.title.toUpperCase(), 0, 2.7, -depth / 2 + .18, 6);
+ }
+
+ for (const { kind, x, z, width: w, depth: d } of config.walk.obstacles) {
+  if (kind === 'rock') {
+   iceRidge(group, x, z, w * .89, 2.9 + w * .26, d);
+   box(group, x, .13, z, w, .29, d, '#587180');
+  } else if (kind === 'bed') {
+   box(group, x, .33, z, w, .56, d, '#33454b');
+   box(group, x, .66, z, w - .12, .23, d - .18, '#ccc0a7');
+   box(group, x, .80, z + .44, w - .18, .14, d * .63, '#607d7c');
+   box(group, x, .82, z - d * .33, w - .45, .18, .65, '#e0d3b7');
+   box(group, x, .56, z - d / 2, w, .98, .11, '#526366');
+  } else if (kind === 'tower') {
+   box(group, x, .21, z, w, .42, d, '#263d4b');
+   box(group, x, 2.75, z, .28, 5.25, .28, '#7d8b91');
+   for (const y of [2.0, 3.1, 4.2]) {
+    box(group, x, y, z, w * (1.2 - y / 7), .13, .15, '#a1adb0');
+    box(group, x, y, z, .15, .13, d * .8, '#7d8b91');
+   }
+   box(group, x, 5.45, z, .31, .24, .31, '#d85543', true);
+   box(group, x, .87, z + .9, 1.28, 1.2, .66, '#485b64');
+   box(group, x, 1.03, z + 1.26, .68, .28, .05, '#70c7b4', true);
+  } else if (kind === 'drill') {
+   box(group, x, .23, z, w, .46, d, '#273d48');
+   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(w * .43, w * .43, .13, 32), mat('#122632'));
+   shaft.position.set(x, .53, z);
+   group.add(shaft);
+   const ring = new THREE.Mesh(new THREE.TorusGeometry(w * .37, .12, 8, 36), mat('#73b1b4', true));
+   ring.rotation.x = -Math.PI / 2;
+   ring.position.set(x, .64, z);
+   group.add(ring);
+   for (const offset of [-2.25, 2.25]) box(group, x + offset, 2.11, z, .34, 3.9, .34, '#8a6b56');
+   box(group, x, 4.17, z, 5.2, .34, .50, '#b37d52');
+   box(group, x, 2.46, z, .48, 3, .48, '#7f9196');
+   const light = new THREE.PointLight('#84d8cd', 35, 12);
+   light.position.set(x, 1.42, z);
+   group.add(light);
+  } else {
+   const height = kind === 'generator' ? 1.8 : kind === 'shelf' ? 2.5 : 1.07;
+   box(group, x, height / 2, z, w, height, d, kind === 'generator' ? '#4e6568' : '#374f59');
+   box(group, x, height, z, w + .07, .17, d + .08, kind === 'desk' ? '#9a8063' : '#879891');
+   if (kind === 'generator') {
+    for (let i = -2; i <= 2; i++) box(group, x + i * .42, .91, z + d / 2, .21, .88, .095, '#26343b');
+    box(group, x, 1.49, z + d / 2 + .05, .75, .18, .07, '#e5a257', true);
+   }
+  }
+ }
+
+ for (const spot of hotspots) {
+  if (spot.area !== area) continue;
+  if (spot.destination) {
+   box(group, spot.x, .025, spot.z, 2.2, .05, 1.6, '#9e7e55');
+   floorSign(group, spot.id === 'trench' ? 'TRENCH' : spot.id === 'lift' ? 'LIFT' : 'EXIT', spot.x, spot.z, 1.9);
+  } else if (spot.record || spot.id === 'recorder') {
+   box(group, spot.x, .16, spot.z, .52, .32, .42, '#59717d');
+   box(group, spot.x, .34, spot.z, .37, .055, .28, '#d6c6a2');
+  } else if (spot.id !== 'decision' && spot.id !== 'reverse') {
+   floorSign(group, spot.id === 'power' ? 'BREAKERS' : spot.id === 'chamber' ? 'INTERLOCK' : '• • •',
+    spot.x, spot.z, spot.id === 'chamber' ? 2.4 : 1.65);
+  }
+ }
+}
+
 export class Levels {
- outside=new THREE.Group();inside=new THREE.Group(); snow:THREE.Points; snowPositions:Float32Array; terminalLight:THREE.PointLight;
+ outside=new THREE.Group();inside=new THREE.Group();
+ private readonly extra = new Map<ExpeditionArea, THREE.Group>(); snow:THREE.Points; snowPositions:Float32Array; terminalLight:THREE.PointLight;
  constructor(public scene:THREE.Scene) {
   scene.add(this.outside,this.inside);this.inside.visible=false;
   scene.add(new THREE.HemisphereLight('#a8c9de','#17212c',2.3));
@@ -54,7 +165,18 @@ export class Levels {
   iceRidge(o, 16, -22, 21, 12, 11);
   iceRidge(o, -24, -3, 15, 8, 15);
   iceRidge(o, -24, 10, 10, 4.7, 12);
-  box(o, 4, -.71, 2, 58, 1.42, 47, '#708998');
+  box(o, 4, -.71, 2, 76, 1.42, 61, '#708998');
+  for (const [index, building] of outbuildings.entries()) {
+   const { x, z, width, depth } = building;
+   box(o, x, 1.55, z, width, 3.1, depth, index ? '#514a44' : '#3c5260');
+   box(o, x, 3.18, z, width + .3, .27, depth + .28, '#a6b6ba');
+   box(o, x, 1.13, z + depth / 2 + .06, 1.45, 2.25, .17, '#293d48');
+   label(o, index ? 'POWER ANNEX' : 'CREW QUARTERS', x, 2.65, z + depth / 2 + .1, width - .75);
+   lamp(o, x, 2.38, z + depth / 2 + .14);
+  }
+  box(o, -8.7, .51, 12.25, 1.45, 1.02, 1.1, '#4c7662');
+  box(o, -8.7, 1.05, 12.25, 1.51, .12, 1.15, '#80a491');
+  floorSign(o, 'RIDGE TRAIL', 28, -10, 3);
 
   const iceGeometry = new THREE.IcosahedronGeometry(1, 0);
   for (let i = 0; i < 42; i++) {
@@ -230,15 +352,33 @@ export class Levels {
    batch.computeBoundingSphere();group.add(batch);
   }
  }
- update(dt:number, x:number) {
-  if (!this.outside.visible) return;
+ update(dt: number, x: number, z: number) {
+  if (!this.snow.visible) return;
   const p=this.snowPositions;
   for(let i=0;i<p.length;i+=3) {
    p[i]-=dt*(2.3+(i%7)*.12);p[i+1]-=dt*(1.4+(i%5)*.2);
-   if(p[i+1]<-.1){p[i+1]=18;p[i]=x+Math.random()*58-29;}
-   if(p[i]<x-32)p[i]=x+32;
+   if (p[i + 1] < -.1 || Math.abs(p[i + 2] - z) > 24 || Math.abs(p[i] - x) > 33) {
+    p[i + 1] = 10 + Math.random() * 8;
+    p[i] = x + Math.random() * 60 - 30;
+    p[i + 2] = z + Math.random() * 44 - 22;
+   }
   }
   this.snow.geometry.attributes.position.needsUpdate=true;
  }
- setLevel(inside:boolean){this.outside.visible=!inside;this.inside.visible=inside;this.snow.visible=!inside;}
+ setLevel(area: Area) {
+  this.outside.visible = area === 'outside';
+  this.inside.visible = area === 'inside';
+  for (const key of expeditionAreas) {
+   let group = this.extra.get(key);
+   if (key === area && !group) {
+    group = new THREE.Group();
+    buildExpedition(group, key);
+    this.batchBoxes(group);
+    this.extra.set(key, group);
+    this.scene.add(group);
+   }
+   if (group) group.visible = area === key;
+  }
+  this.snow.visible = area === 'outside' || area === 'ridge' || area === 'crevasse';
+ }
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { GroundPoint } from './movement';
+import type { Area } from '../world/expedition-layout';
 
 const exteriorCenter = { x: 4.8, z: 0.7 };
 const roomCenter = { x: 0, z: 0 };
@@ -15,14 +16,20 @@ export class FollowCamera {
     this.aspect = width / Math.max(1, height);
   }
 
-  update(player: GroundPoint, dt: number, inside: boolean, snap = false) {
+  update(player: GroundPoint, dt: number, area: Area, snap = false) {
     const portrait = this.aspect < 0.85;
-    const halfHeight = inside ? (portrait ? 9.4 : 8.7) : (portrait ? 11 : 12);
+    const inside = area === 'inside';
+    const expanded = area !== 'inside' && area !== 'outside';
+    const halfHeight = inside ? (portrait ? 9.4 : 8.7) : (portrait ? 11 : expanded ? 11 : 12);
     const halfWidth = halfHeight * this.aspect;
     const center = inside ? roomCenter : exteriorCenter;
 
     // Keep the room framed on desktop. On narrow screens, keep the player in view.
-    const follow = portrait ? 0.84 : inside ? 0.10 : 0.32;
+    const outdoors = area === 'outside' || area === 'ridge' || area === 'crevasse';
+    const distanceFromYard = Math.hypot(player.x - exteriorCenter.x, player.z - exteriorCenter.z);
+    const follow = expanded ? 1 : outdoors
+      ? Math.max(portrait ? .89 : .38, Math.min(1, (distanceFromYard - 7) / 13))
+      : portrait ? .84 : .10;
     const blend = snap ? 1 : 1 - Math.exp(-3.8 * dt);
     this.focus.x = THREE.MathUtils.lerp(this.focus.x, THREE.MathUtils.lerp(center.x, player.x, follow), blend);
     this.focus.z = THREE.MathUtils.lerp(this.focus.z, THREE.MathUtils.lerp(center.z, player.z, follow), blend);

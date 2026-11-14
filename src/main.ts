@@ -8,7 +8,12 @@ import { AudioSystem } from './systems/audio';
 import { move, type GroundPoint } from './systems/movement';
 import { loadSave, saveGame, freshSave } from './systems/save';
 import { Levels } from './world/levels';
-import { radioRoom, station, walkAreas } from './world/layout';
+import { walkAreas } from './world/layout';
+import { expedition, expeditionAreas, type Area } from './world/expedition-layout';
+import { available, chapter, currentObjective, endings, has, hotspots, routeTarget, type Hotspot, type Line } from './world/story';
+import { archive, type Ending } from './systems/progress';
+import { FieldConditions } from './systems/field';
+import { Encounter } from './systems/encounter';
 
 createUI();
 const state=loadSave();
@@ -67,98 +72,282 @@ const diamond = new THREE.Mesh(
 waypoint.add(halo, diamond);
 scene.add(waypoint);
 
+const field = new FieldConditions();
+const encounter = new Encounter();
+const figure = new THREE.Group();
+const arrow = el('objectiveArrow');
+const figureMaterial = new THREE.MeshBasicMaterial({ color: '#152329', transparent: true, opacity: .72 });
+const coat = new THREE.Mesh(new THREE.CylinderGeometry(.24, .43, 1.34, 6), figureMaterial);
+coat.position.y = .82;
+const head = new THREE.Mesh(new THREE.SphereGeometry(.24, 8, 6), figureMaterial);
+head.position.y = 1.66;
+figure.add(coat, head);
+scene.add(figure);
+
+type Panel = 'pause' | 'journal' | 'map' | 'ending';
+let panel: Panel | undefined;
+let dialogue: { lines: Line[]; index: number; tag: string; finish?: () => void } | undefined;
+let nearby: Hotspot | undefined;
+let navigation: Hotspot | undefined;
+let accumulator = 0;
+let last = performance.now();
+let saveTimer = 0;
+let toastTimer = 0;
+let clock = 0;
+let stepDistance = 0;
+let wasCracking = false;
+let lastFieldStatus = '';
+
+const snowy = (area: Area) => area === 'outside' || area === 'ridge' || area === 'crevasse';
+const exposed = (area: Area) => area === 'ridge' || area === 'crevasse';
+const placeName = (area: Area) => area === 'outside' ? 'Station yard' : area === 'inside' ? 'Radio room' : expedition[area].title;
+
+function formatTime(seconds: number) {
+  const whole = Math.floor(seconds);
+  return `${Math.floor(whole / 60).toString().padStart(2, '0')}:${(whole % 60).toString().padStart(2, '0')}`;
+}
+
+function toast(message: string) {
+  el('toast').textContent = message;
+  el('toast').style.opacity = '1';
+  toastTimer = 5;
+}
+
+function persist() {
+  state.x = player.body.x;
+  state.z = player.body.z;
+  el('saveLabel').textContent = saveGame(state) ? 'PROGRESS SAVED AUTOMATICALLY' : 'LOCAL STORAGE UNAVAILABLE';
+}
+
 function placePlayer(point: GroundPoint) {
   Object.assign(player.body, { x: point.x, z: point.z, y: 0, vx: 0, vy: 0, vz: 0, grounded: true });
   player.body.facing.x = Math.SQRT1_2;
   player.body.facing.z = -Math.SQRT1_2;
+  stepDistance = 0;
   player.update(0);
-  camera.update(player.body, 0, state.level === 'inside', true);
-}
-let manualPause=false, dialogIndex=-1, activePanel:'pause'|'journal'='pause', accumulator=0, last=performance.now(), saveTimer=0, toastTimer=0, time=0;
-let nearby: 'entrance' | 'exit' | 'terminal' | '' = '';
-const lines=[
- ['UNKNOWN VOICE','…Kestrel. Kestrel, do you read?'],
- ['UNKNOWN VOICE','If you can hear this, keep the lights on. Do not follow the figures in the snow.'],
- ['DR. ELIAS VOSS','This is Dr. Voss. I just arrived. Who is transmitting?'],
- ['UNKNOWN VOICE','You arrived three days ago, Doctor.'],
- ['SYSTEM','SIGNAL LOST. Transmission recorded in your field notes.']
-];
-function toast(message:string){el('toast').textContent=message;el('toast').style.opacity='1';toastTimer=4;}
-function persist(){state.x=player.body.x;state.z=player.body.z;const ok=saveGame(state);el('saveLabel').textContent=ok?'PROGRESS SAVED AUTOMATICALLY':'LOCAL STORAGE UNAVAILABLE';}
-function updateObjective(){el('journalButton').querySelector('.unread')!.textContent=state.heard?'2':'1';el('objectiveText').textContent=state.heard?'Investigate the repeating signal':state.level==='inside'?'Investigate the radio terminal':'Reach the research station';el('flashState').textContent=`◉ FLASHLIGHT ${state.flashlight?'ON':'OFF'}`;el('journalButton').setAttribute('aria-label',`Field notes, ${state.heard?'2':'1'} entries`);}
-function changeLevel(position: GroundPoint, announce = true) {
- const inside=state.level==='inside';levels.setLevel(inside);
- scene.background=new THREE.Color(inside?'#101c25':'#152b3b');scene.fog=new THREE.FogExp2(inside?'#15232b':'#243f50',inside ? .0045 : .009);
- nearby = '';
- placePlayer(position);
- if (announce) {
-  persist();
-  audio.beep(330);
-  toast(inside ? 'KESTREL STATION  /  COMMUNICATIONS' : 'EXTERIOR  /  KEEP THE LIGHTS ON');
- }
- updateScene(0);
- el('locationTitle').textContent = inside ? 'RADIO ROOM' : 'KESTREL STATION';
- el('sceneLabel').textContent=inside?'INTERIOR · RADIO ROOM':'EXTERIOR · APPROACH';el('worldCaption').hidden=inside;
- el<HTMLHeadingElement>('game').classList.toggle('indoors',inside);updateObjective();
+  camera.update(player.body, 0, state.level, true);
 }
 
-function setPause(paused:boolean,panel:'pause'|'journal'='pause'){
- manualPause=paused;activePanel=panel;input.clear();el('overlay').hidden=!paused;audio.pause(paused||document.hidden);
- el('pauseButton').setAttribute('aria-label',paused?'Resume game':'Pause game');
- if(!paused){last=performance.now();return;}
- el('panelTitle').textContent=panel==='journal'?'Field notes':'Expedition paused';
- el('panelContent').innerHTML=panel==='journal'?`<p class="entry">01 / AUGUST 17, 1987</p><p>Kestrel stopped answering at 03:14. No distress call. Just twelve seconds of white noise. I was sent to find out why.</p>${state.heard?'<p class="entry">02 / THE TRANSMISSION</p><p>“You arrived three days ago, Doctor.” The voice knew my name. The terminal logged the same message at 03:14. Next: trace the source of the repeating signal.</p>':'<p>The station has power. Someone may still be inside. Find the entrance and check the communications terminal.</p>'}`:'<p>The storm can wait a moment.</p><p>WASD or arrows to move · Shift to run<br>Space to jump · F for flashlight<br>E to interact · J for field notes · Esc to pause</p>';
- el('resumeButton').focus();
+function updateObjective() {
+  const objective = currentObjective(state);
+  navigation = routeTarget(state, objective.target);
+  el('objectiveText').textContent = state.level === 'outside' && !has(state, 'heard')
+    ? 'Reach the station and listen to the radio' : objective.text;
+  el('objectiveRoute').textContent = navigation && navigation.id !== objective.target
+    ? navigation.label : '';
+  const current = chapter(state);
+  el('chapterText').textContent = `CHAPTER ${current.number} / ${current.title}`;
+  el('flashState').textContent = `◉ FLASHLIGHT ${state.flashlight ? 'ON' : 'OFF'}`;
+  el('evidenceCount').textContent = `EVIDENCE ${state.evidence.length}/${Object.keys(archive).length}`;
+  const entries = 1 + state.progress.length + state.evidence.length;
+  el('journalButton').querySelector('.unread')!.textContent = String(entries);
+  el('journalButton').setAttribute('aria-label', `Field notes, ${entries} entries`);
 }
-function advanceDialogue(){
- dialogIndex++;
- if(dialogIndex>=lines.length){dialogIndex=-1;el('dialogue').hidden=true;state.heard=true;el('journalButton').querySelector('.unread')!.textContent='2';updateObjective();persist();toast('TRANSMISSION ARCHIVED  /  FIELD NOTES UPDATED');return;}
- el('dialogue').hidden=false;el('speaker').textContent=lines[dialogIndex][0];el('dialogueText').textContent=lines[dialogIndex][1];el('nextDialogue').innerHTML=`${dialogIndex===lines.length-1?'ARCHIVE':'CONTINUE'} <kbd>E</kbd> →`;audio.beep(dialogIndex===3?180:540);
-}
-function interact(){
- if(manualPause)return;
- audio.start();
- if(dialogIndex>=0){advanceDialogue();return;}
- if(nearby==='entrance'){state.level='inside';changeLevel(radioRoom.spawn);}
- else if(nearby==='exit'){state.level='outside';changeLevel({ x: station.entrance.x, z: station.entrance.z + 1.0 });}
- else if(nearby==='terminal'){player.body.vx=0;player.body.vz=0;advanceDialogue();}
-}
-el('interactButton').addEventListener('click',interact);el('nextDialogue').addEventListener('click',advanceDialogue);
-el('pauseButton').addEventListener('click',()=>setPause(!manualPause));
-el('journalButton').addEventListener('click',()=>setPause(!(manualPause&&activePanel==='journal'),'journal'));
-el('resumeButton').addEventListener('click',()=>setPause(false));
-el('soundButton').addEventListener('click',()=>{audio.toggle();el('soundLabel').textContent=audio.muted?'SOUND OFF':'SOUND ON';el('soundButton').setAttribute('aria-label',audio.muted?'Enable audio':'Mute audio');});
-el('restartButton').addEventListener('click', () => {
-  Object.assign(state, freshSave());
-  dialogIndex = -1;
-  el('dialogue').hidden = true;
-  changeLevel(station.spawn, false);
-  persist();
-  setPause(false);
-  toast('AUGUST 17, 1987  /  THE ARRIVAL');
-});
-document.addEventListener('visibilitychange',()=>{input.clear();accumulator=0;last=performance.now();if(document.hidden)persist();audio.pause(document.hidden||manualPause);});
-window.addEventListener('pagehide',persist);
-window.addEventListener('keydown',e=>{if(e.repeat)return;if(e.code==='Escape'){e.preventDefault();setPause(!manualPause);}if(e.code==='KeyJ'){e.preventDefault();setPause(!(manualPause&&activePanel==='journal'),'journal');}});
-function resize() {
-  const viewport = el('viewport');
-  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
-  camera.resize(viewport.clientWidth, viewport.clientHeight);
-  camera.update(player.body, 0, state.level === 'inside', true);
-}
-window.addEventListener('resize', resize);
 
-function withinReach(point: GroundPoint & { radius: number }) {
-  return player.body.y < 0.6 && Math.hypot(player.body.x - point.x, player.body.z - point.z) < point.radius;
+function changeArea(area: Area, point: GroundPoint, announce = true) {
+  state.level = area;
+  const outdoors = snowy(area);
+  levels.setLevel(area);
+  field.reset(area);
+  wasCracking = false;
+  lastFieldStatus = '';
+  audio.surface(outdoors);
+  scene.background = new THREE.Color(outdoors ? '#152b3b' : '#101c25');
+  scene.fog = new THREE.FogExp2(outdoors ? '#243f50' : '#15232b', exposed(area) ? .012 : outdoors ? .009 : .0045);
+  el('locationTitle').textContent = (area === 'outside' ? 'Kestrel Station' : placeName(area)).toUpperCase();
+  el('sceneLabel').textContent = area === 'outside' ? 'EXTERIOR · STATION YARD'
+    : area === 'inside' ? 'INTERIOR · RADIO ROOM' : expedition[area].subtitle;
+  el('worldCaption').hidden = area !== 'outside';
+  el('fieldMeters').hidden = !exposed(area);
+  el('game').classList.toggle('indoors', !outdoors);
+  nearby = undefined;
+  placePlayer(point);
+  updateObjective();
+  updateFieldHud();
+  updateScene(0);
+  updatePrompt();
+  if (announce) {
+    persist();
+    audio.beep(330);
+    toast(placeName(area));
+  }
+}
+
+function addParagraph(content: HTMLElement, text: string, className = '') {
+  const p = document.createElement('p');
+  p.textContent = text;
+  p.className = className;
+  content.append(p);
+}
+
+function addHeading(content: HTMLElement, text: string) {
+  const heading = document.createElement('h3');
+  heading.textContent = text;
+  content.append(heading);
+}
+
+const areaLocks: Partial<Record<Area, Hotspot['requires']>> = {
+  quarters: ['heard'], annex: ['locker'], ridge: ['dispatch'], crevasse: ['triangulated'], borehole: ['override'],
+};
+
+function setPanel(next?: Panel) {
+  panel = next;
+  input.clear();
+  el('overlay').hidden = !next;
+  el('pauseButton').setAttribute('aria-label', next ? 'Resume game' : 'Pause game');
+  updatePrompt();
+  audio.pause(document.hidden || next === 'pause' || next === 'journal' || next === 'map');
+  if (!next) {
+    last = performance.now();
+    (document.activeElement as HTMLElement | null)?.blur();
+    return;
+  }
+
+  el('panelTitle').textContent = { pause: 'Expedition paused', journal: 'Field notes', map: 'Expedition map', ending: 'Expedition complete' }[next];
+  const content = el('panelContent');
+  content.replaceChildren();
+  if (next === 'pause') {
+    addParagraph(content, 'WASD or arrows to move · Shift to run · Space to jump · F for flashlight · E to interact');
+    addParagraph(content, 'J opens Field Notes. M shows the route to your objective. Use the sound button to mute or restore footsteps and signal tones.');
+  } else if (next === 'journal') {
+    addHeading(content, 'August 17, 1987');
+    addParagraph(content, 'Kestrel stopped answering at 03:14. No distress call. Just twelve seconds of white noise.');
+    for (const spot of [...hotspots].reverse()) {
+      if (!spot.proof || !has(state, spot.proof)) continue;
+      addHeading(content, spot.label);
+      for (const [speaker, line] of spot.lines ?? []) addParagraph(content, `${speaker} — ${line}`);
+    }
+    for (const id of state.evidence) {
+      addHeading(content, archive[id].title);
+      addParagraph(content, archive[id].text);
+    }
+  } else if (next === 'map') {
+    addParagraph(content, `You are here · ${placeName(state.level)}`);
+    addParagraph(content, currentObjective(state).text, 'map-route');
+    if (navigation) addParagraph(content, `Follow the amber marker · ${navigation.label}`);
+    const list = document.createElement('ul');
+    list.className = 'map-list';
+    for (const area of ['outside', 'inside', ...expeditionAreas] as const) {
+      const row = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = placeName(area);
+      const status = document.createElement('span');
+      status.textContent = area === state.level ? 'YOU ARE HERE' : areaLocks[area]?.every(flag => has(state, flag)) === false ? 'LOCKED' : 'OPEN';
+      row.append(name, status);
+      list.append(row);
+    }
+    content.append(list);
+  } else {
+    addParagraph(content, state.ending === 'seal' ? 'Ending · The chamber is sealed' : 'Ending · The warning reaches the coast');
+    addParagraph(content, `${formatTime(state.elapsed)} active time · ${state.evidence.length} of ${Object.keys(archive).length} optional discoveries archived`);
+    addParagraph(content, 'Return to the station to look for any evidence you missed.');
+  }
+  el('resumeButton').focus();
+}
+
+function togglePanel(next: Panel) {
+  setPanel(panel === next ? undefined : next);
+}
+
+function beginDialogue(lines: Line[], tag: string, finish?: () => void) {
+  input.clear();
+  player.body.vx = 0;
+  player.body.vz = 0;
+  dialogue = { lines, index: -1, tag, finish };
+  advanceDialogue();
+  updatePrompt();
+}
+
+function advanceDialogue() {
+  if (!dialogue || panel || encounter.open) return;
+  dialogue.index++;
+  const line = dialogue.lines[dialogue.index];
+  if (!line) {
+    const finish = dialogue.finish;
+    dialogue = undefined;
+    el('dialogue').hidden = true;
+    finish?.();
+    updatePrompt();
+    return;
+  }
+  const [speaker, text] = line;
+  el('dialogue').hidden = false;
+  el('dialogueTag').textContent = dialogue.tag;
+  el('speaker').textContent = speaker;
+  el('dialogueText').textContent = text;
+  el('nextDialogue').firstChild!.textContent = dialogue.index + 1 === dialogue.lines.length ? 'ARCHIVE ' : 'CONTINUE ';
+  audio.beep(speaker.includes('VOICE') ? 310 : 460);
+}
+
+function complete(spot: Hotspot) {
+  if (spot.proof && !has(state, spot.proof)) state.progress.push(spot.proof);
+  if (spot.record && !state.evidence.includes(spot.record)) state.evidence.push(spot.record);
+  updateObjective();
+  persist();
+  if (spot.proof === 'heard') toast('The crew quarters are now accessible.');
+  else if (spot.record) toast('Evidence archived in Field Notes.');
+  else if (spot.proof) toast('Objective updated.');
+}
+
+function tell(spot: Hotspot) {
+  const entry = spot.record && archive[spot.record];
+  const lines: Line[] = entry ? [[entry.title.toUpperCase(), entry.text]] : spot.lines ?? [];
+  if (!lines.length) { complete(spot); return; }
+  beginDialogue(lines, spot.id === 'terminal' ? 'INCOMING TRANSMISSION · 87.6 MHz' : 'KESTREL · FIELD RECORD', () => complete(spot));
+}
+
+function finishExpedition(ending: Ending) {
+  encounter.close();
+  beginDialogue(endings[ending], 'BOREHOLE NINE · FINAL TRANSMISSION', () => {
+    state.ending = ending;
+    updateObjective();
+    persist();
+    setPanel('ending');
+  });
+}
+
+function interact() {
+  if (panel || encounter.open) return;
+  if (dialogue) { advanceDialogue(); return; }
+  if (!nearby || !available(state, nearby)) return;
+  const spot = nearby;
+  if (spot.needsLight && !state.flashlight) {
+    toast('Too dark to see the floor. Switch on your flashlight.');
+    return;
+  }
+  if (spot.destination) {
+    changeArea(spot.destination.area, spot.destination.point);
+  } else if (spot.finale) {
+    encounter.show('One transmission left', 'The signal is contained for now. What should your last transmission do?', ['Seal the chamber', 'Warn the coast'], choice =>
+      finishExpedition(choice === 0 ? 'seal' : 'send'));
+  } else if (spot.puzzle) {
+    encounter.puzzle(spot.puzzle, choice => audio.beep(spot.id === 'echo' ? [240, 420, 620][choice] : 380 + choice * 85), () => tell(spot));
+  } else tell(spot);
+}
+
+function updatePrompt() {
+  const wall = Boolean(panel || encounter.open);
+  const show = nearby && !dialogue && !wall;
+  el('interact').hidden = !show;
+  if (show) el('interactText').textContent = nearby!.label;
+  const action = el<HTMLButtonElement>('touchAction');
+  action.disabled = wall || (!nearby && !dialogue);
+  action.textContent = dialogue ? 'NEXT' : nearby?.destination ? 'OPEN' : 'USE';
+}
+
+function updateFieldHud() {
+  el<HTMLMeterElement>('warmth').value = field.warm;
+  el<HTMLMeterElement>('attention').value = field.alert * 100;
+  el('warmthValue').textContent = field.shelter ? 'HEATING' : `${Math.round(field.warm)}%`;
+  el('attentionValue').textContent = field.alert > .50 ? 'TRACKED' : field.alert > .12 ? 'HEARD' : 'QUIET';
+  el('whiteout').style.opacity = String(Math.max(0, (37 - field.warm) / 77));
 }
 
 function updateScene(dt: number) {
-  const inside = state.level === 'inside';
   const { x, y, z, facing } = player.body;
   player.update(dt);
-  levels.update(dt, x);
-  camera.update(player.body, dt, inside);
-
+  levels.update(dt, x, z);
+  camera.update(player.body, dt, state.level);
   flashlight.visible = state.flashlight;
   flashlight.position.set(x + facing.x * .4, y + 1.05, z + facing.z * .4);
   flashlight.target.position.set(x + facing.x * 7, .05, z + facing.z * 7);
@@ -166,57 +355,190 @@ function updateScene(dt: number) {
   beam.position.set(x + facing.x * .48, .095, z + facing.z * .48);
   beam.rotation.y = Math.atan2(-facing.z, facing.x);
 
-  const target = inside ? radioRoom.terminal : station.entrance;
-  waypoint.visible = dialogIndex < 0;
-  waypoint.position.set(target.x, .1, target.z);
-  diamond.position.y = 1.08 + Math.sin(time * 2.8) * .16;
-  diamond.rotation.y = time * 1.5;
-  levels.terminalLight.intensity = 5 + Math.sin(time * 3) * .4;
+  waypoint.visible = Boolean(navigation && !dialogue && !encounter.open);
+  arrow.hidden = !navigation;
+  if (navigation) {
+    waypoint.position.set(navigation.x, .1, navigation.z);
+    const dx = navigation.x - x;
+    const dz = navigation.z - z;
+    const range = Math.hypot(dx, dz);
+    const angle = Math.atan2((dx + dz) / Math.sqrt(3), dx - dz);
+    arrow.style.transform = `rotate(${angle}rad)`;
+    const distance = el('objectiveDistance');
+    const readout = range < 1.7 ? 'NEARBY' : `${Math.round(range)} M`;
+    if (distance.textContent !== readout) distance.textContent = readout;
+  } else el('objectiveDistance').textContent = '';
+  diamond.position.y = 1.08 + Math.sin(clock * 2.8) * .16;
+  diamond.rotation.y = clock * 1.5;
+  levels.terminalLight.intensity = 5 + Math.sin(clock * 3) * .4;
+  figure.visible = Boolean(field.figure);
+  if (field.figure) {
+    figure.position.set(field.figure.x, Math.sin(clock * 5) * .035, field.figure.z);
+    figureMaterial.opacity = .65 + field.alert * .28 + Math.sin(clock * 9) * .05;
+  }
 }
 
 function fixed(dt: number) {
-  if (input.pressed('KeyF')) {
+  if (!state.ending) state.elapsed += dt;
+  clock += dt;
+  if (input.pressed('KeyF') && !encounter.open) {
     state.flashlight = !state.flashlight;
     updateObjective();
     audio.beep(240);
   }
-  const jump = input.pressed('Space');
-  // Let an in-flight jump land while the dialogue blocks new movement.
-  const talking = dialogIndex >= 0;
-  move(player.body, {
-    right: talking ? 0 : input.right,
-    down: talking ? 0 : input.down,
-    run: input.held('ShiftLeft', 'ShiftRight'),
-    jump: jump && !talking,
-  }, dt, walkAreas[state.level]);
 
-  nearby = '';
-  if (!talking) {
-    if (state.level === 'outside' && withinReach(station.entrance)) nearby = 'entrance';
-    if (state.level === 'inside') {
-      if (withinReach(radioRoom.exit)) nearby = 'exit';
-      if (withinReach(radioRoom.terminal)) nearby = 'terminal';
+  const before = { x: player.body.x, z: player.body.z };
+  const grounded = player.body.grounded;
+  const stopped = Boolean(dialogue || encounter.open);
+  move(player.body, {
+    right: stopped ? 0 : input.right,
+    down: stopped ? 0 : input.down,
+    run: input.held('ShiftLeft', 'ShiftRight'),
+    jump: input.pressed('Space') && !stopped,
+  }, dt, walkAreas[state.level]);
+  const actualDistance = Math.hypot(player.body.x - before.x, player.body.z - before.z);
+  const speed = actualDistance / dt;
+  if (player.body.grounded) {
+    const surface = snowy(state.level) ? 'snow' : 'floor';
+    if (!grounded) {
+      audio.step(surface, 1.2, true);
+      stepDistance = 0;
+    } else if (speed > .27) {
+      stepDistance += actualDistance;
+      const stride = speed > 3.5 ? 1.23 : .89;
+      if (stepDistance >= stride) {
+        stepDistance -= stride;
+        audio.step(surface, speed > 3.5 ? 1.03 : .74);
+      }
+    } else stepDistance = 0;
+  }
+
+  if (!stopped && exposed(state.level)) {
+    const result = field.tick(state.level, player.body, speed, state.flashlight, dt);
+    const cracking = field.ice > 0;
+    if (cracking && !wasCracking) {
+      audio.step('snow', 1.3);
+      toast('Thin ice cracking. Jump or move back.');
+    }
+    wasCracking = cracking;
+    if (result) {
+      placePlayer(result.checkpoint);
+      toast(result.message);
+      persist();
+    }
+    const status = field.shelter ? 'heater' : field.alert > .50 ? 'alert' : field.warm < 26 ? 'cold' : '';
+    if (!result && status !== lastFieldStatus) {
+      if (status === 'heater') toast('Heated beacon · Warmth recovering');
+      if (status === 'alert') { audio.beep(130); toast('Something noticed you. Slow down, switch off your light, or reach a beacon.'); }
+      if (status === 'cold') toast('Warmth low. Find a heated beacon.');
+    }
+    lastFieldStatus = status;
+    updateFieldHud();
+  }
+
+  nearby = undefined;
+  if (!stopped && player.body.y < .6) {
+    let nearest = Infinity;
+    for (const spot of hotspots) {
+      if (spot.area !== state.level || !available(state, spot)) continue;
+      const distance = Math.hypot(player.body.x - spot.x, player.body.z - spot.z);
+      if (distance < spot.radius && distance < nearest) { nearby = spot; nearest = distance; }
     }
   }
   if (input.pressed('KeyE', 'Enter')) interact();
-  el('interact').hidden = !nearby || dialogIndex >= 0;
-  el('interactText').textContent = nearby === 'entrance' ? 'Enter station'
-    : nearby === 'exit' ? 'Return outside' : state.heard ? 'Replay transmission' : 'Use radio terminal';
-  const action = el<HTMLButtonElement>('touchAction');
-  action.disabled = !nearby && dialogIndex < 0;
-  action.textContent = dialogIndex >= 0 ? 'NEXT' : nearby === 'entrance' ? 'ENTER' : nearby === 'exit' ? 'EXIT' : 'USE';
-
-  time += dt;
+  updatePrompt();
   updateScene(dt);
+
   saveTimer += dt;
-  if (saveTimer > 5) { persist(); saveTimer = 0; }
+  if (saveTimer >= 5) { persist(); saveTimer = 0; }
   if (toastTimer > 0) {
     toastTimer -= dt;
     if (toastTimer <= 0) el('toast').style.opacity = '0';
   }
 }
-function frame(now:number){requestAnimationFrame(frame);const delta=Math.min((now-last)/1000,.1);last=now;if(document.hidden)return;if(!manualPause){accumulator+=delta;while(accumulator>=1/60){fixed(1/60);accumulator-=1/60;}}renderer.render(scene,camera.camera);}
+
+el('interactButton').addEventListener('click', interact);
+el('nextDialogue').addEventListener('click', advanceDialogue);
+el('exitPuzzle').addEventListener('click', () => encounter.close());
+el('pauseButton').addEventListener('click', () => togglePanel('pause'));
+el('journalButton').addEventListener('click', () => togglePanel('journal'));
+el('mapButton').addEventListener('click', () => togglePanel('map'));
+el('resumeButton').addEventListener('click', () => setPanel());
+const soundButton = el('soundButton');
+const soundPreference = 'the-white-signal:sound';
+try { audio.muted = localStorage.getItem(soundPreference) === 'off'; }
+catch { audio.muted = false; }
+function showSoundStatus() {
+  el('soundLabel').textContent = audio.muted ? 'SOUND OFF' : 'SOUND ON';
+  soundButton.setAttribute('aria-label', audio.muted ? 'Enable audio' : 'Mute audio');
+}
+showSoundStatus();
+function enableSoundOnInput(event: Event) {
+  if (!event.isTrusted) return;
+  window.removeEventListener('keydown', enableSoundOnInput);
+  window.removeEventListener('pointerdown', enableSoundOnInput);
+  audio.start();
+}
+window.addEventListener('keydown', enableSoundOnInput);
+window.addEventListener('pointerdown', enableSoundOnInput);
+soundButton.addEventListener('click', () => {
+  audio.toggle();
+  try { localStorage.setItem(soundPreference, audio.muted ? 'off' : 'on'); } catch { /* Audio still works without storage. */ }
+  showSoundStatus();
+});
+el('restartButton').addEventListener('click', () => {
+  if (!window.confirm('Restart the expedition and clear this checkpoint?')) return;
+  Object.assign(state, freshSave(), { ending: undefined });
+  encounter.close();
+  dialogue = undefined;
+  el('dialogue').hidden = true;
+  changeArea(state.level, state);
+  setPanel();
+});
+
+window.addEventListener('keydown', event => {
+  if (event.repeat) return;
+  if (event.code === 'Escape') {
+    event.preventDefault();
+    if (panel) setPanel();
+    else if (encounter.open) encounter.close();
+    else togglePanel('pause');
+    return;
+  }
+  if (event.code === 'KeyJ') togglePanel('journal');
+  if (event.code === 'KeyM') togglePanel('map');
+  if (!panel && encounter.open && /^Digit[1-9]$/.test(event.code)) encounter.press(Number(event.key) - 1);
+});
+document.addEventListener('visibilitychange', () => {
+  input.clear();
+  accumulator = 0;
+  last = performance.now();
+  if (document.hidden) persist();
+  audio.pause(document.hidden || Boolean(panel));
+});
+window.addEventListener('pagehide', persist);
+
+function resize() {
+  const viewport = el('viewport');
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  camera.resize(viewport.clientWidth, viewport.clientHeight);
+  camera.update(player.body, 0, state.level, true);
+}
+window.addEventListener('resize', resize);
+
+function frame(now: number) {
+  requestAnimationFrame(frame);
+  const delta = Math.min((now - last) / 1000, .1);
+  last = now;
+  if (document.hidden) return;
+  if (!panel) {
+    accumulator += delta;
+    while (accumulator >= 1 / 60) { fixed(1 / 60); accumulator -= 1 / 60; }
+  }
+  el('elapsed').textContent = formatTime(state.elapsed);
+  renderer.render(scene, camera.camera);
+}
+
 resize();
-changeLevel(state, false);
+changeArea(state.level, state, false);
 requestAnimationFrame(frame);
-setTimeout(()=>toast('The station went silent at 03:14. Find out why.'),900);
