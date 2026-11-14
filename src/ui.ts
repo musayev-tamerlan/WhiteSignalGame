@@ -10,20 +10,21 @@ export function createUI() {
   <div class="world-caption" id="worldCaption"><span>04</span><div>KESTREL RESEARCH OUTPOST<small>LAST CONTACT: 03:14 UTC</small></div></div>
   <div class="scene-label"><span></span> <span id="sceneLabel">EXTERIOR · APPROACH</span></div>
   <div id="interact" class="interact" hidden><button id="interactButton"><kbd>E</kbd><span id="interactText">Enter station</span><span>↗</span></button></div>
-  <div id="toast" role="status"></div>
+  <div id="toast" role="status"></div><div id="caption" aria-live="polite"></div><div id="titleCard" aria-hidden="true"><small id="titleCardNumber"></small><strong id="titleCardTitle"></strong></div>
   <footer class="hud"><div class="status"><div class="scientist-icon">✚</div><div><div class="eyebrow">DR. ELIAS VOSS</div><div class="field-meters" id="fieldMeters" hidden>
     <div class="field-meter"><label for="warmth">WARMTH</label><meter id="warmth" min="0" max="100" low="25" optimum="100" value="100"></meter><span id="warmthValue">100%</span></div>
     <div class="field-meter"><label for="attention">EXPOSURE</label><meter id="attention" min="0" max="100" high="55" optimum="0" value="0"></meter><span id="attentionValue">QUIET</span></div>
+    <div class="field-meter"><label for="battery">BATTERY</label><meter id="battery" min="0" max="100" low="20" optimum="100" value="100"></meter><span id="batteryValue">100%</span></div>
    </div><div class="equipment"><span id="flashState">◉ FLASHLIGHT ON</span><span id="evidenceCount">EVIDENCE 0/8</span></div></div></div>
   <div class="objective"><span class="objective-mark">◇</span><div><div class="eyebrow">CURRENT OBJECTIVE</div><p id="objectiveText">Reach the research station</p><small id="objectiveRoute"></small><small id="objectiveDistance"></small></div><span class="objective-arrow" id="objectiveArrow" aria-hidden="true">→</span></div><div class="save-state"><span id="saveDot">◇</span><div>LOCAL CHECKPOINT<small id="saveLabel">PROGRESS SAVED AUTOMATICALLY</small></div></div></footer>
   <div class="desktop-controls"><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> MOVE</span><span><kbd>SHIFT</kbd> RUN</span><span><kbd>SPACE</kbd> JUMP</span><span><kbd>F</kbd> FLASHLIGHT</span><span><kbd>E</kbd> INTERACT</span></div>
   <div class="slice-label"><span id="elapsed">00:00</span> ACTIVE TIME</div>
   <div class="touch-controls"><div class="touch-move" role="group" aria-label="Movement">
-    <button class="move-up" data-control="KeyW" aria-label="Move up">↑</button>
-    <button class="move-left" data-control="KeyA" aria-label="Move left">←</button>
-    <button class="move-down" data-control="KeyS" aria-label="Move down">↓</button>
-    <button class="move-right" data-control="KeyD" aria-label="Move right">→</button>
-  </div><div class="touch-actions"><button data-control="ShiftLeft" aria-label="Hold to run">RUN</button><button data-control="KeyF" aria-label="Toggle flashlight">☀</button><button data-control="Space" aria-label="Jump">⤒</button><button data-control="KeyE" id="touchAction" aria-label="Interact" disabled>USE</button></div></div>
+    <button class="move-up" data-control="up" aria-label="Move up">↑</button>
+    <button class="move-left" data-control="left" aria-label="Move left">←</button>
+    <button class="move-down" data-control="down" aria-label="Move down">↓</button>
+    <button class="move-right" data-control="right" aria-label="Move right">→</button>
+  </div><div class="touch-actions"><button data-control="run" aria-label="Hold to run">RUN</button><button data-control="flashlight" aria-label="Toggle flashlight">☀</button><button data-control="jump" aria-label="Jump">⤒</button><button data-control="interact" id="touchAction" aria-label="Interact" disabled>USE</button></div></div>
   <section id="dialogue" class="dialogue" hidden aria-label="Dialogue"><div class="transmission-top"><span class="live-dot"></span><span id="dialogueTag">INCOMING TRANSMISSION</span></div><div class="waveform">${Array.from({length:48},(_,i)=>`<i style="--h:${12+Math.sin(i*2.3)*9+Math.cos(i)*5}px;--d:${i*.04}s"></i>`).join('')}</div><div class="speaker" id="speaker">UNKNOWN VOICE</div><p id="dialogueText" aria-live="polite"></p><button id="nextDialogue">CONTINUE <kbd>E</kbd> →</button></section>
   <div id="whiteout" aria-hidden="true"></div>
   <div id="puzzle" class="overlay" hidden>
@@ -36,7 +37,7 @@ export function createUI() {
     <button id="exitPuzzle" class="text-button">STEP BACK · ESC</button>
    </section>
   </div>
-  <div id="overlay" class="overlay" hidden><section class="panel"><div class="eyebrow">THE WHITE SIGNAL</div><h2 id="panelTitle">Expedition paused</h2><div id="panelContent"></div><button class="primary" id="resumeButton">RESUME EXPEDITION <span>→</span></button><button id="restartButton" class="text-button">RESTART EXPEDITION</button></section></div>
+  <div id="overlay" class="overlay" hidden><section class="panel"><div class="eyebrow">THE WHITE SIGNAL</div><h2 id="panelTitle">Expedition paused</h2><div id="panelContent"></div><div id="panelActions"></div><button class="primary" id="resumeButton">RESUME EXPEDITION <span>→</span></button><button id="restartButton" class="text-button">RESTART EXPEDITION</button></section></div>
  </main>`;
 }
 export const el = <T extends HTMLElement=HTMLElement>(id:string) => document.getElementById(id) as T;

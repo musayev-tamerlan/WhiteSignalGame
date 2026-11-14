@@ -25,7 +25,11 @@ export class AudioSystem {
   private swell?: GainNode;
   private swellLfo?: OscillatorNode;
   private swellDepth?: GainNode;
+  private gustLevel = 0;
+  volume = .8;
   muted = true;
+
+  private get level() { return this.muted ? 0 : .35 * this.volume; }
 
   start() {
     if (this.context) {
@@ -37,7 +41,7 @@ export class AudioSystem {
     try { ctx = new AudioContext(); } catch { return; }
     this.context = ctx;
     this.master = ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : .28;
+    this.master.gain.value = this.level;
     this.master.connect(ctx.destination);
 
     const buffer = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
@@ -106,6 +110,7 @@ export class AudioSystem {
     if (!ctx || !this.wind || !this.droneGain || !this.swell || !this.swellLfo || !this.swellDepth) return;
     const t = ctx.currentTime;
     const sound = ambiences[place];
+    this.gustLevel = 0;
     this.wind.gain.setTargetAtTime(sound.wind, t, .6);
     this.droneGain.gain.setTargetAtTime(sound.droneLevel, t, .8);
     this.drones.forEach((oscillator, i) => {
@@ -125,7 +130,21 @@ export class AudioSystem {
   toggle() {
     this.muted = !this.muted;
     this.start();
-    if (this.master && this.context) this.master.gain.setTargetAtTime(this.muted ? 0 : .28, this.context.currentTime, .15);
+    if (this.master && this.context) this.master.gain.setTargetAtTime(this.level, this.context.currentTime, .15);
+  }
+
+  setVolume(volume: number) {
+    this.volume = volume;
+    if (this.master && this.context) this.master.gain.setTargetAtTime(this.level, this.context.currentTime, .1);
+  }
+
+  /** Raises the wind during a storm, from 0 (calm) to 1. */
+  gust(level: number) {
+    if (Math.abs(level - this.gustLevel) < .03 && level !== 0 && level !== 1) return;
+    this.gustLevel = level;
+    if (this.wind && this.context) {
+      this.wind.gain.setTargetAtTime(ambiences[this.place].wind * (1 + level * 1.6), this.context.currentTime, .4);
+    }
   }
 
   step(surface: Surface, force: number, landing = false) {

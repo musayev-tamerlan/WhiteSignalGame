@@ -13,7 +13,8 @@ window.whiteSignalCheck = async (ending = 'seal') => {
   };
   const answers = { locker: '241', power: '1432', west: '24', center: '24', east: '35', receiver: '3', echo: '231',
     dampers: '242', chamber: '141', reverse: '321', boathouse: '232', mast: '312', caller: '2' };
-  Object.assign(S, { progress: [], evidence: [], ending: undefined, elapsed: 0 });
+  ws.close();
+  Object.assign(S, { progress: [], evidence: [], ending: undefined, elapsed: 0, splits: { '01': 0 }, cycle: 0 });
   ws.go('outside', -5, 5);
   const log = [];
   for (let i = 0; i < 120; i++) {
@@ -28,7 +29,7 @@ window.whiteSignalCheck = async (ending = 'seal') => {
     if (target.finale) key(ending === 'seal' ? 'Digit1' : 'Digit2', ending === 'seal' ? '1' : '2');
     if (!$('puzzle').hidden) throw new Error(`${target.id}: ${$('puzzleFeedback').textContent}`);
     for (let n = 0; n < 25 && !$('dialogue').hidden; n++) key('KeyE', 'e');
-    if (!$('overlay').hidden) $('resumeButton').click();
+    if (!$('overlay').hidden) ws.close();
     if (before === `${S.progress.length}${S.level}${S.ending ?? ''}`) throw new Error(`${target.id} did nothing`);
     log.push(target.id);
   }
