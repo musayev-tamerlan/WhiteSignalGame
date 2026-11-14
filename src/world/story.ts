@@ -246,7 +246,7 @@ export const hotspots: Hotspot[] = [
     radius: 1.65, requires: ['reverse'], finale: true,
   }),
   event('borehole', 'letter', 'Read the unsent letter', 10, 3.45, { record: 'letter' }),
-  event('borehole', 'chairs', 'Look at the folding chairs', -1.5, 1.5, { record: 'chairs' }),
+  event('borehole', 'chairs', 'Look at the folding chairs', -2.6, -4, { record: 'chairs' }),
   event('coast', 'coast-return', 'Follow the road back to the crevasse', -29.5, 16.5, { destination: { area: 'crevasse', point: { x: -25.5, z: -14.5 } } }),
   coastLog('seal', [
     ['COAST LOG · AUG 17', '03:15. Kestrel carrier dropped. First silence on 87.6 MHz in three days.'],

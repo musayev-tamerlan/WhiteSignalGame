@@ -97,6 +97,7 @@ let clock = 0;
 let stepDistance = 0;
 let wasCracking = false;
 let lastFieldStatus = '';
+let heartbeat = 0;
 
 const snowy = (area: Area) => area === 'outside' || isFieldArea(area);
 const exposed = isFieldArea;
@@ -152,6 +153,7 @@ function changeArea(area: Area, point: GroundPoint, announce = true) {
   wasCracking = false;
   lastFieldStatus = '';
   audio.surface(outdoors);
+  audio.ambience(area === 'outside' ? 'yard' : area === 'inside' ? 'radio' : area);
   scene.background = new THREE.Color(outdoors ? '#152b3b' : '#101c25');
   scene.fog = new THREE.FogExp2(outdoors ? '#243f50' : '#15232b', exposed(area) ? .012 : outdoors ? .009 : .0045);
   el('locationTitle').textContent = (area === 'outside' ? 'Kestrel Station' : placeName(area)).toUpperCase();
@@ -443,6 +445,12 @@ function fixed(dt: number) {
       if (status === 'cold') toast('Warmth low. Find a heated beacon.');
     }
     lastFieldStatus = status;
+    // The heartbeat starts once the figure hears you and quickens as it closes in.
+    heartbeat -= dt;
+    if (field.alert > .12 && !field.shelter && heartbeat <= 0) {
+      audio.heartbeat(field.alert);
+      heartbeat = 1.25 - field.alert * .7;
+    }
     updateFieldHud();
   }
 
@@ -547,6 +555,15 @@ function frame(now: number) {
   }
   el('elapsed').textContent = formatTime(state.elapsed);
   renderer.render(scene, camera.camera);
+}
+
+// Development-only hooks for browser checks. Vite strips this block from production builds.
+if (import.meta.env.DEV) {
+  Object.assign(window, { whiteSignal: {
+    state,
+    go: (area: Area, x: number, z: number) => changeArea(area, { x, z }),
+    grant: (...flags: typeof state.progress) => { state.progress.push(...flags.filter(flag => !has(state, flag))); updateObjective(); },
+  } });
 }
 
 resize();

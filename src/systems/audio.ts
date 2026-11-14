@@ -1,4 +1,17 @@
 type Surface = 'snow' | 'floor';
+export type Ambience = 'yard' | 'radio' | 'quarters' | 'annex' | 'ridge' | 'crevasse' | 'borehole' | 'coast';
+
+// Each place gets a low drone (two detuned oscillators), a wind level and a slow swell.
+const ambiences: Record<Ambience, { drone: number; droneLevel: number; wind: number; swell: number; swellRate: number }> = {
+  yard: { drone: 0, droneLevel: 0, wind: .46, swell: 0, swellRate: .1 },
+  radio: { drone: 60, droneLevel: .05, wind: .07, swell: 0, swellRate: .1 },
+  quarters: { drone: 50, droneLevel: .025, wind: .09, swell: 0, swellRate: .1 },
+  annex: { drone: 45, droneLevel: .09, wind: .06, swell: 0, swellRate: .1 },
+  ridge: { drone: 0, droneLevel: 0, wind: .62, swell: 0, swellRate: .1 },
+  crevasse: { drone: 33, droneLevel: .04, wind: .38, swell: 0, swellRate: .1 },
+  borehole: { drone: 38, droneLevel: .1, wind: .03, swell: .08, swellRate: .45 },
+  coast: { drone: 0, droneLevel: 0, wind: .4, swell: .26, swellRate: .09 },
+};
 
 export class AudioSystem {
   private context?: AudioContext;
@@ -6,6 +19,12 @@ export class AudioSystem {
   private wind?: GainNode;
   private crunch?: AudioBuffer;
   private snowy = true;
+  private place: Ambience = 'yard';
+  private drones: OscillatorNode[] = [];
+  private droneGain?: GainNode;
+  private swell?: GainNode;
+  private swellLfo?: OscillatorNode;
+  private swellDepth?: GainNode;
   muted = true;
 
   start() {
@@ -35,6 +54,38 @@ export class AudioSystem {
     source.connect(filter).connect(this.wind).connect(this.master);
     source.start();
 
+    this.droneGain = ctx.createGain();
+    this.droneGain.gain.value = 0;
+    const droneFilter = ctx.createBiquadFilter();
+    droneFilter.type = 'lowpass';
+    droneFilter.frequency.value = 220;
+    this.drones = [0, 1].map(() => {
+      const oscillator = ctx.createOscillator();
+      oscillator.type = 'sawtooth';
+      oscillator.connect(droneFilter);
+      oscillator.start();
+      return oscillator;
+    });
+    droneFilter.connect(this.droneGain).connect(this.master);
+
+    // Surf on the coast and the chamber's slow pulse share one modulated noise layer.
+    const surfFilter = ctx.createBiquadFilter();
+    surfFilter.type = 'lowpass';
+    surfFilter.frequency.value = 650;
+    this.swell = ctx.createGain();
+    this.swell.gain.value = 0;
+    this.swellLfo = ctx.createOscillator();
+    this.swellDepth = ctx.createGain();
+    this.swellLfo.connect(this.swellDepth).connect(this.swell.gain);
+    this.swellLfo.start();
+    const surf = ctx.createBufferSource();
+    surf.buffer = buffer;
+    surf.loop = true;
+    surf.playbackRate.value = .7;
+    surf.connect(surfFilter).connect(this.swell).connect(this.master);
+    surf.start();
+    this.ambience(this.place);
+
     this.crunch = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .23), ctx.sampleRate);
     const grains = this.crunch.getChannelData(0);
     let pressure = 0;
@@ -47,7 +98,28 @@ export class AudioSystem {
 
   surface(snowy: boolean) {
     this.snowy = snowy;
-    if (this.wind && this.context) this.wind.gain.setTargetAtTime(snowy ? .46 : .07, this.context.currentTime, .35);
+  }
+
+  ambience(place: Ambience) {
+    this.place = place;
+    const ctx = this.context;
+    if (!ctx || !this.wind || !this.droneGain || !this.swell || !this.swellLfo || !this.swellDepth) return;
+    const t = ctx.currentTime;
+    const sound = ambiences[place];
+    this.wind.gain.setTargetAtTime(sound.wind, t, .6);
+    this.droneGain.gain.setTargetAtTime(sound.droneLevel, t, .8);
+    this.drones.forEach((oscillator, i) => {
+      if (sound.drone) oscillator.frequency.setTargetAtTime(sound.drone * (i ? 1.007 : 1), t, .3);
+    });
+    this.swell.gain.setTargetAtTime(sound.swell, t, .8);
+    this.swellDepth.gain.setTargetAtTime(sound.swell * .9, t, .8);
+    this.swellLfo.frequency.setTargetAtTime(sound.swellRate, t, .3);
+  }
+
+  /** A low double thump used when a figure has noticed the player. */
+  heartbeat(intensity: number) {
+    this.tone(52, .16, .16 + intensity * .2);
+    setTimeout(() => this.tone(46, .2, .1 + intensity * .16), 170);
   }
 
   toggle() {

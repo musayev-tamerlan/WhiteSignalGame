@@ -154,6 +154,8 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
   }
  }
 
+ decorate(group, area);
+
  for (const spot of hotspots) {
   if (spot.area !== area) continue;
   if (spot.destination) {
@@ -166,6 +168,42 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
   } else if (spot.id !== 'decision' && spot.id !== 'reverse' && spot.id !== 'coast-log-send') {
    floorSign(group, spot.id === 'power' ? 'BREAKERS' : spot.id === 'chamber' ? 'INTERLOCK' : '• • •',
     spot.x, spot.z, spot.id === 'chamber' ? 2.4 : 1.65);
+  }
+ }
+}
+
+// Story props that don't block movement: each one is a visual trace of an evidence entry.
+function decorate(group: THREE.Group, area: ExpeditionArea) {
+ if (area === 'annex') {
+  label(group, 'VOSS ///', 7.5, .62, -1.88, 1.5, '#d8c29a');
+  box(group, 0, 2.6, -7.2, 1.5, 1.1, .06, '#1b1f20');
+  box(group, 0, 2.6, -7.16, .9, .5, .04, '#5a3a27');
+ } else if (area === 'crevasse') {
+  // Mara's abandoned sled with three bags.
+  for (const dz of [-.55, .55]) box(group, -22, .06, -15 + dz, 2.6, .08, .1, '#8a9297');
+  box(group, -22, .2, -15, 2.3, .14, 1.2, '#6b5240');
+  for (const [i, color] of ['#33505c', '#33505c', '#a8603a'].entries()) box(group, -22.75 + i * .75, .42, -15, .62, .3, 1, color);
+  // Survey flags south of the trench: three painted, one bare pole.
+  for (const [i, color] of ['#3b6fa0', '#d0543f', '#e0c35a', ''].entries()) {
+   const x = .8 + i * .85;
+   box(group, x, .7, 17.2, .06, 1.4, .06, '#5b6870');
+   if (color) box(group, x + .2, 1.22, 17.2, .38, .26, .03, color);
+  }
+ } else if (area === 'borehole') {
+  // Six folding chairs face the shaft. The last one is out of line.
+  for (let i = 0; i < 6; i++) {
+   const z = -6.8 + i * 1.15, x = i === 5 ? -1.75 : -1.45;
+   box(group, x, .42, z, .5, .06, .5, i === 5 ? '#7b6a55' : '#a9bcc2');
+   box(group, x - .24, .72, z, .06, .6, .5, '#6f7d82');
+   for (const dz of [-.2, .2]) box(group, x, .2, z + dz, .4, .4, .04, '#4d5a5f');
+  }
+ } else if (area === 'coast') {
+  // Mast lamps from the top: red, white, green.
+  box(group, 4, 4.2, 10, .26, .2, .26, '#f1efe2', true);
+  box(group, 4, 3.0, 10, .26, .2, .26, '#5fd08a', true);
+  // One set of bootprints from the road to the open water.
+  for (let i = 0; i < 18; i++) {
+   box(group, -26 - i * .32, .02, 10 - i * .55 + (i % 2 ? .18 : -.18), .22, .02, .12, '#5b7684').rotation.y = .5;
   }
  }
 }
