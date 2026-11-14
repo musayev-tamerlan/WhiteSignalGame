@@ -5,7 +5,7 @@ export type ExpeditionArea = typeof expeditionAreas[number];
 export type Area = 'outside' | 'inside' | ExpeditionArea;
 export type FieldArea = 'ridge' | 'crevasse' | 'coast';
 type Fixture = WalkArea['obstacles'][number] & {
-  kind: 'bed' | 'desk' | 'shelf' | 'generator' | 'rock' | 'tower' | 'drill' | 'crate' | 'hut'; name?: string;
+  kind: 'bed' | 'desk' | 'shelf' | 'generator' | 'rock' | 'tower' | 'drill' | 'crate' | 'hut' | 'prop'; name?: string;
 };
 
 function room(width: number, depth: number, obstacles: Fixture[]) {
@@ -81,6 +81,17 @@ export const heaters: Record<FieldArea, GroundPoint[]> = {
 };
 
 export const fieldAreas: readonly FieldArea[] = ['ridge', 'crevasse', 'coast'];
+
+// Collision for story props and heater cabinets. They are drawn separately in levels.ts,
+// so the 'prop' kind adds a footprint without drawing a generic box.
+const props: Partial<Record<ExpeditionArea, Fixture[]>> = {
+  crevasse: [fixture('prop', -22, -15, 2.7, 1.3), fixture('prop', 2.1, 17.2, 3, .3)], // sled, survey flags
+  borehole: [fixture('prop', -1.5, -3.9, .7, 6.4)], // folding chairs
+};
+for (const area of fieldAreas) {
+  for (const heater of heaters[area]) expedition[area].walk.obstacles.push(fixture('prop', heater.x, heater.z - .85, 1.35, .78));
+}
+for (const [area, list] of Object.entries(props) as [ExpeditionArea, Fixture[]][]) expedition[area].walk.obstacles.push(...list);
 export const isFieldArea = (area: Area): area is FieldArea => (fieldAreas as readonly Area[]).includes(area);
 
 export const thinIce = [

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { canStandAt } from '../systems/movement';
 import { freshSave, loadSave } from '../systems/save';
 import { archive, milestones } from '../systems/progress';
-import type { Area } from './expedition-layout';
+import { expedition, fieldAreas, heaters, type Area } from './expedition-layout';
 import { walkAreas } from './layout';
 import type { Save } from '../systems/save';
 import { available, coastEpilogue, codaOptions, currentObjective, endings, hotspots, routeTarget } from './story';
@@ -142,4 +142,16 @@ test('the hidden coast outcome needs every discovery', () => {
   save.evidence = Object.keys(archive) as Save['evidence'];
   assert.deepEqual(codaOptions(save).map(option => option.id), ['silence', 'listen', 'witness']);
   for (const coda of ['silence', 'listen', 'witness'] as const) assert.ok(coastEpilogue({ ...save, coda }).length >= 3, coda);
+});
+
+test('solid props block movement and leave beacons and patrols walkable', () => {
+  const solid: [Area, number, number][] = [
+    ['outside', -8.7, 12.25], ['outside', -8.5, 2.65], ['outside', -13, -3], ['outside', 15.6, -3.3],
+    ['outside', -21, -4], ['outside', -22, 10], ['crevasse', -22, -15], ['borehole', -1.5, -4],
+  ];
+  for (const [area, x, z] of solid) assert.equal(canStandAt(x, z, walkAreas[area]), false, `${area} ${x},${z}`);
+  for (const area of fieldAreas) {
+    for (const heater of heaters[area]) assert.ok(canStandAt(heater.x, heater.z, walkAreas[area]), `${area} heater ${heater.x},${heater.z}`);
+    assert.ok(canStandAt(expedition[area].spawn.x, expedition[area].spawn.z, walkAreas[area]), `${area} spawn`);
+  }
 });

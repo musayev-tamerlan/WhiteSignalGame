@@ -102,6 +102,7 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
  }
 
  for (const { kind, x, z, width: w, depth: d, name } of config.walk.obstacles) {
+  if (kind === 'prop') continue;
   if (kind === 'hut') {
    box(group, x, 1.45, z, w, 2.9, d, name === 'BOATHOUSE' ? '#4d4740' : '#3a505d');
    box(group, x, 2.98, z, w + .3, .26, d + .3, '#a6b6ba');
