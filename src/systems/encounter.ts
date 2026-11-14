@@ -37,7 +37,7 @@ export class Encounter {
       this.attempt.push(choice);
       if (puzzle.feedback === 'prefix' && choice !== puzzle.answer[index]) {
         this.attempt = [];
-        this.feedback('The lock rejected that step. Sequence reset.');
+        this.feedback(puzzle.reject ?? 'The lock rejected that step. Sequence reset.');
       } else if (this.attempt.length === puzzle.answer.length) {
         const correct = puzzle.answer.filter((entry, i) => entry === this.attempt[i]).length;
         if (correct === puzzle.answer.length) {

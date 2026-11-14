@@ -11,6 +11,8 @@ export type Puzzle = {
   choices: string[];
   answer: number[];
   feedback: 'prefix' | 'count' | 'gauge';
+  /** Shown instead of the default lock message when a step is wrong. */
+  reject?: string;
 };
 
 export interface Hotspot extends GroundPoint {
@@ -280,7 +282,8 @@ export const hotspots: Hotspot[] = [
   event('coast', 'suit', 'Search the survival suit', -16.6, -9.6, { afterEnding: true, requires: ['feedKey'], record: 'tag' }),
   event('coast', 'mast', 'Cut the mast lamp feeds', 4, 12.4, {
     afterEnding: true, requires: ['feedKey'], proof: 'mast',
-    puzzle: { title: 'Mast feed cutoff', hint: 'Cut the three lamp feeds in Ilse’s order. Her note is saved in Field Notes.', choices: ['Red', 'White', 'Green'], answer: [2, 0, 1], feedback: 'prefix' },
+    puzzle: { title: 'Mast feed cutoff', hint: 'Cut the three lamp feeds in Ilse’s order. Her note is saved in Field Notes.', choices: ['Red', 'White', 'Green'], answer: [2, 0, 1], feedback: 'prefix',
+      reject: 'The lamps flare back on. Start again from the bottom of the mast.' },
     lines: [
       ['COAST MAST', 'The lamps go dark from the bottom up. For a moment the middle one relights by itself, then stays out.'],
       ['RADIO HUT', 'Incoming call on the hut set. Caller ID: KESTREL / SATO.'],
@@ -288,7 +291,8 @@ export const hotspots: Hotspot[] = [
   }),
   event('coast', 'caller', 'Answer the hut radio', 23, -9.6, {
     afterEnding: true, requires: ['mast'], proof: 'caller',
-    puzzle: { title: 'Verify the caller', hint: 'The caller says she is Mara Sato and asks you to reopen the mast. Ask the question she left with Ilse before you answer.', choices: ['Ask where she is', 'Ask what she called the dog', 'Ask what day it is'], answer: [1], feedback: 'prefix' },
+    puzzle: { title: 'Verify the caller', hint: 'The caller says she is Mara Sato and asks you to reopen the mast. Ask the question she left with Ilse before you answer.', choices: ['Ask where she is', 'Ask what she called the dog', 'Ask what day it is'], answer: [1], feedback: 'prefix',
+      reject: 'She laughs softly. “Does it matter, Elias? Just open the mast.” Ask the question Mara left with Ilse.' },
     lines: [
       ['CALLER', 'His name was Pilot. You used to throw snow for him, Elias. Open the mast and I’ll come home.'],
       ['VOSS', 'Mara never had a dog.'],

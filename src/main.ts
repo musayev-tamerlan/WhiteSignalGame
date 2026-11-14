@@ -563,6 +563,8 @@ if (import.meta.env.DEV) {
     state,
     go: (area: Area, x: number, z: number) => changeArea(area, { x, z }),
     grant: (...flags: typeof state.progress) => { state.progress.push(...flags.filter(flag => !has(state, flag))); updateObjective(); },
+    // Advance the fixed simulation without rendering, for checks in a hidden tab.
+    tick: (frames = 1) => { for (let i = 0; i < frames; i++) if (!panel) fixed(1 / 60); },
   } });
 }
 

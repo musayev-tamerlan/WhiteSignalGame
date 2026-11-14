@@ -56,7 +56,7 @@ export const expedition = {
     ]),
   },
   coast: {
-    title: 'Halvard coast station', subtitle: 'EXTERIOR · SEA ICE SHORELINE', snow: true, spawn: { x: -27, z: 13 },
+    title: 'Halvard coast', subtitle: 'EXTERIOR · COAST STATION SHORELINE', snow: true, spawn: { x: -27, z: 13 },
     walk: room(64, 40, [
       fixture('hut', 20, -13.5, 9, 5, 'RADIO HUT'), fixture('hut', -12, -13.5, 7, 5, 'BOATHOUSE'),
       fixture('tower', 4, 10, 3, 3), fixture('rock', -20, 2, 5, 7), fixture('rock', 0, -4, 6, 5),

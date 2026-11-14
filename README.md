@@ -20,6 +20,7 @@ Open the printed local URL (normally http://localhost:5173). For a phone on the 
 ```sh
 npm test       # movement, field hazards, objective routing, checkpoint compatibility
 npm run build # TypeScript check and production bundle
+npm run pacing # estimated critical-path time per chapter
 npm run preview # serve production build locally
 ```
 
@@ -43,7 +44,7 @@ Follow the amber marker to the radio room and listen to the transmission. The jo
 
 Running and using the flashlight can give away your position around the figures. Rewarm and set a recovery point at heated beacons. Sprint and jump across yellow-striped thin ice, or take the longer route around it. Cracking ice, whiteouts, and encounters send you back to the last beacon with your discoveries intact.
 
-The six chapters, nine optional discoveries, two possible endings, and the coastal epilogue chapter are designed around a roughly 40-minute first playthrough. Actual playtime depends on exploration and puzzle solving. The ending screen reports active time.
+The six chapters, thirteen optional discoveries, two possible endings, and the coastal epilogue chapter are designed around a roughly 40-minute first playthrough. Actual playtime depends on exploration and puzzle solving. The ending screen reports active time.
 
 Checkpoints from the earlier side-scrolling version restore on a clear part of the map. Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Expedition in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
 
