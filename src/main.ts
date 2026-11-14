@@ -20,11 +20,13 @@ import { setLanguage, t, tf } from './i18n';
 import { actions, keyName, loadSettings, saveSettings, type Action } from './systems/settings';
 import { Achievements, achievementList, type AchievementId } from './systems/achievements';
 import type { PadCommand } from './systems/input';
+import { Voice } from './systems/voice';
 
 createUI();
 const state=loadSave();
 const settings = loadSettings();
 const achievements = new Achievements();
+const voice = new Voice();
 let renderer: THREE.WebGLRenderer;
 try { renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'}); }
 catch { el('viewport').innerHTML='<p style="padding:30vh 10%;position:relative;z-index:20">The White Signal needs WebGL. Please enable hardware acceleration and reload in a supported browser.</p>'; throw new Error('WebGL unavailable'); }
@@ -118,6 +120,8 @@ function applySettings() {
   input.bindings = settings.keys;
   field.difficulty = settings.difficulty;
   audio.setVolume(settings.volume);
+  voice.enabled = settings.voice;
+  voice.volume = settings.volume;
   document.documentElement.style.setProperty('--text-scale', String(settings.textScale));
   document.documentElement.lang = settings.language;
   el('caption').classList.toggle('hidden-ui', !settings.captions);
@@ -245,6 +249,7 @@ function setPanel(next?: Panel) {
   el('pauseButton').setAttribute('aria-label', t(next ? 'Resume game' : 'Pause game'));
   updatePrompt();
   audio.pause(document.hidden || Boolean(next && next !== 'ending'));
+  if (next && next !== 'ending') voice.stop();
   if (!next) {
     last = performance.now();
     (document.activeElement as HTMLElement | null)?.blur();
@@ -313,6 +318,7 @@ function setPanel(next?: Panel) {
       settings.textScale = settings.textScale === 1 ? 1.15 : settings.textScale === 1.15 ? 1.3 : 1;
     });
     toggle('Sound captions', () => settings.captions ? 'ON' : 'OFF', () => { settings.captions = !settings.captions; });
+    if (voice.available) toggle('Voice-over', () => settings.voice ? 'ON' : 'OFF', () => { settings.voice = !settings.voice; if (!settings.voice) voice.stop(); });
     toggle('Difficulty', () => ({ story: 'STORY · no capture, mild cold', normal: 'NORMAL', hard: 'HARD · colder, sharper ears' })[settings.difficulty], () => {
       settings.difficulty = settings.difficulty === 'normal' ? 'hard' : settings.difficulty === 'hard' ? 'story' : 'normal';
     });
@@ -415,6 +421,7 @@ function startExpedition(cycle: number) {
   encounter.close();
   dialogue = undefined;
   el('dialogue').hidden = true;
+  voice.stop();
   lastChapter = '';
   callerVerified = false;
   visited.clear();
@@ -444,6 +451,7 @@ function advanceDialogue() {
     const finish = dialogue.finish;
     dialogue = undefined;
     el('dialogue').hidden = true;
+    voice.stop();
     finish?.();
     updatePrompt();
     return;
@@ -456,6 +464,7 @@ function advanceDialogue() {
   el('nextDialogue').firstChild!.textContent = `${t(dialogue.index + 1 === dialogue.lines.length ? 'ARCHIVE' : 'CONTINUE')} `;
   el('nextDialogue').querySelector('kbd')!.textContent = keyName(settings.keys.interact);
   audio.beep(speaker.includes('VOICE') ? 310 : 460);
+  if (!audio.muted) voice.speak(speaker, t(text), settings.language);
 }
 
 function complete(spot: Hotspot) {
@@ -722,6 +731,7 @@ window.addEventListener('keydown', enableSoundOnInput);
 window.addEventListener('pointerdown', enableSoundOnInput);
 soundButton.addEventListener('click', () => {
   audio.toggle();
+  if (audio.muted) voice.stop();
   try { localStorage.setItem(soundPreference, audio.muted ? 'off' : 'on'); } catch { /* Audio still works without storage. */ }
   showSoundStatus();
 });
@@ -799,7 +809,7 @@ document.addEventListener('visibilitychange', () => {
   input.clear();
   accumulator = 0;
   last = performance.now();
-  if (document.hidden) persist();
+  if (document.hidden) { persist(); voice.stop(); }
   audio.pause(document.hidden || Boolean(panel));
 });
 window.addEventListener('pagehide', persist);
@@ -849,6 +859,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
 }
 
 applySettings();
+showSoundStatus();
 resize();
 changeArea(state.level, state, false);
 setPanel('menu');

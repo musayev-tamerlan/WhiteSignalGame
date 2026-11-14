@@ -7,6 +7,7 @@ export interface Settings {
   volume: number;
   textScale: number;
   captions: boolean;
+  voice: boolean;
   difficulty: Difficulty;
   language: Language;
   keys: Record<Action, string>;
@@ -26,7 +27,7 @@ export const fixedKeys: Partial<Record<Action, string[]>> = {
 const KEY = 'the-white-signal:settings';
 
 export const defaultSettings = (): Settings => ({
-  volume: .8, textScale: 1, captions: true, difficulty: 'normal',
+  volume: .8, textScale: 1, captions: true, voice: true, difficulty: 'normal',
   language: typeof navigator !== 'undefined' && navigator.language?.startsWith('ru') ? 'ru' : 'en',
   keys: { ...defaultKeys },
 });
@@ -39,6 +40,7 @@ export function loadSettings(): Settings {
     if (Number.isFinite(saved.volume)) settings.volume = Math.min(1, Math.max(0, saved.volume));
     if ([1, 1.15, 1.3].includes(saved.textScale)) settings.textScale = saved.textScale;
     if (typeof saved.captions === 'boolean') settings.captions = saved.captions;
+    if (typeof saved.voice === 'boolean') settings.voice = saved.voice;
     if (['story', 'normal', 'hard'].includes(saved.difficulty)) settings.difficulty = saved.difficulty;
     if (['en', 'ru'].includes(saved.language)) settings.language = saved.language;
     for (const action of actions) {

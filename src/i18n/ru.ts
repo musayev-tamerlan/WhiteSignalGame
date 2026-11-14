@@ -455,6 +455,7 @@ export const ru: Record<string, string> = {
   'Volume': 'Громкость',
   'Text size': 'Размер текста',
   'Sound captions': 'Субтитры звуков',
+  'Voice-over': 'Озвучка',
   'Difficulty': 'Сложность',
   'Language': 'Язык',
   'STORY · no capture, mild cold': 'СЮЖЕТ · без поимки, мягкий холод',
