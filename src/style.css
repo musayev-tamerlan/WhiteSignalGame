@@ -5,3 +5,60 @@
 @media(pointer:coarse),(max-width:700px){.desktop-controls,.slice-label{display:none}.touch-controls{display:flex;position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:5%;right:5%;justify-content:space-between;z-index:5;pointer-events:none}.touch-controls button{pointer-events:auto;touch-action:none;user-select:none;width:49px;height:49px;border:1px solid #9cb9c34d;background:#142a37a6;border-radius:50%;font-size:19px;backdrop-filter:blur(8px)}.touch-move,.touch-actions{display:flex;gap:10px}.touch-actions button:first-child,.touch-actions button:last-child{font-size:9px}.touch-controls .held{background:#78919d88;border-color:#e1c5a1}.hud{bottom:94px;padding-bottom:17px}.world-caption{display:none}.topbar{height:72px}.brand{font-size:16px;letter-spacing:2.5px;gap:10px}.brand small{font-size:6px}.brand-mark{width:31px;line-height:32px;font-size:23px}.brand-mark span{left:11px}.location{top:110px}.location h1{font-size:31px;letter-spacing:4px}.location p{font-size:7px}.scene-label{top:89px;font-size:6px}.topbar nav{gap:17px}.objective{min-width:0;gap:9px}.objective p{font-size:9px;max-width:155px;line-height:1.6}.objective-arrow{display:none}.objective .eyebrow{font-size:6px}.status .eyebrow{font-size:7px}.scientist-icon{display:none}.health-bars i{width:8px}.equipment{font-size:5px;gap:7px}.health-bars span{font-size:5px;margin-left:3px}.weather{font-size:7px;gap:7px;margin-top:20px}.interact{bottom:32%}.dialogue{bottom:27%;padding:20px}.dialogue p{font-size:23px}.location .eyebrow{font-size:7px}.touch-actions{gap:7px}.touch-actions button{width:43px;height:43px}.touch-move button{width:48px;height:48px}#toast{bottom:185px;font-size:7px;max-width:90%;white-space:normal;text-align:center}}
 @media(max-height:560px){.topbar{height:58px}.location{top:82px}.location h1{font-size:28px;margin:8px 0}.weather{margin-top:10px}.hud{bottom:63px;padding-bottom:12px}.desktop-controls{bottom:22px}.slice-label{bottom:25px}.scene-label{top:76px}.touch-controls{bottom:10px}.touch-controls button{width:38px;height:38px}.dialogue{bottom:20%;max-width:490px;padding:15px 22px}.waveform{height:24px}.dialogue p{font-size:21px;min-height:40px}.equipment{display:none}.panel{padding:22px}.panel h2{font-size:28px;margin:12px 0}.panel p{font-size:10px}.primary{margin-top:12px}}
 @media(prefers-reduced-motion:reduce){.waveform i{animation:none}}
+
+.indoors .weather {
+  display: none;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  .touch-controls {
+    align-items: end;
+  }
+
+  .touch-controls .touch-move {
+    display: grid;
+    grid-template-columns: repeat(3, clamp(32px, 9vw, 40px));
+    grid-template-areas: ". up ." "left down right";
+    gap: 4px;
+  }
+
+  .touch-controls .touch-move button {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 7px;
+  }
+
+  .move-up { grid-area: up; }
+  .move-left { grid-area: left; }
+  .move-down { grid-area: down; }
+  .move-right { grid-area: right; }
+
+  .touch-controls .touch-actions {
+    gap: 5px;
+  }
+
+  .touch-controls .touch-actions button {
+    width: clamp(32px, 10vw, 43px);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .hud {
+    bottom: max(112px, calc(env(safe-area-inset-bottom) + 96px));
+  }
+}
+
+@media (pointer: coarse) and (max-height: 560px) {
+  .touch-controls .touch-move {
+    grid-template-columns: repeat(3, 32px);
+  }
+
+  .touch-controls .touch-actions button {
+    width: 37px;
+  }
+
+  .hud {
+    bottom: 87px;
+  }
+}

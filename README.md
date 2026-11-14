@@ -1,6 +1,6 @@
 # The White Signal
 
-A browser-based 2.5D survival mystery. Antarctica, 1987. Three.js, TypeScript, Vite; no backend or game engine dependency.
+A browser-based isometric survival mystery. Antarctica, 1987. Three.js, TypeScript, Vite; no backend or game engine dependency.
 
 ## Run
 
@@ -23,28 +23,29 @@ Deploy the `dist/` directory to any static host. No environment variables or bac
 
 ## Play
 
-- A/D or left/right arrows: move
+- WASD or the arrow keys: move
 - Shift: run
-- Space/W/up arrow: jump
+- Space: jump
 - F: flashlight
 - E/Enter: interact / advance transmission
 - J: field notes
 - Escape: pause
 - Sound button: enable synthesized wind and radio tones (starts muted)
 
-Touch controls appear on phones/tablets and narrow screens. Hold arrows to move, RUN to sprint, ↑ to jump, ☀ for flashlight; the context action changes to ENTER / EXIT / USE / NEXT. Rotate to landscape for a wider view.
+Touch controls appear on phones/tablets and narrow screens. Hold the directional pad to move, RUN to sprint, ⤒ to jump, ☀ for flashlight; the context action changes to ENTER / EXIT / USE / NEXT. Rotate to landscape for a wider view.
 
-Walk right to the orange-lit station door. Enter, approach the green radio terminal, and advance the mysterious transmission. The ending records a new field note and objective; further investigation is beyond this prologue.
+Follow the packed snow and amber marker to the station door. Enter, approach the green radio terminal, and advance the mysterious transmission. The ending records a new field note and objective; further investigation is beyond this prologue.
 
-Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Prologue in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
+Checkpoints from the earlier side-scrolling version restore on a clear part of the map. Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Prologue in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
 
 ## Structure
 
 - `src/main.ts`: game lifecycle, fixed 60 Hz loop, state, interaction/dialogue flow
-- `src/world/levels.ts`: outdoor station, layered mountains, interior, batched snow particles
+- `src/world/levels.ts`: outdoor station, ice ridges, cutaway radio room, batched snow particles
+- `src/world/layout.ts`: shared landmarks, walkable areas, and collision footprints
 - `src/systems/movement.ts`: deterministic movement and collision bounds
 - `src/systems/character.ts`: original procedural pixel sprite and animation
-- `src/systems/camera.ts`: orthographic camera, responsive framing, smooth follow
+- `src/systems/camera.ts`: isometric orthographic camera, responsive framing, smooth follow
 - `src/systems/input.ts`: keyboard and multi-pointer mobile input
 - `src/systems/audio.ts`: opt-in synthesized wind and radio cues
 - `src/systems/save.ts`: validated, versioned local saves

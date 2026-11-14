@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { radioRoom, station } from './layout';
 const materials = new Map<string,THREE.MeshStandardMaterial>();
 function mat(color:string,glow=false) {
  const key=color+glow; if(!materials.has(key)) materials.set(key,new THREE.MeshStandardMaterial({color,roughness:.93,emissive:glow?color:0,emissiveIntensity:glow?.65:0})); return materials.get(key)!;
@@ -11,18 +12,28 @@ function label(g:THREE.Group,text:string,x:number,y:number,z:number,w:number,col
  const c=document.createElement('canvas');c.width=512;c.height=128;const ctx=c.getContext('2d')!;
  if(bg){ctx.fillStyle=bg;ctx.fillRect(0,0,512,128);}ctx.fillStyle=color;ctx.font='500 48px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,256,64);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
- const m=new THREE.Mesh(new THREE.PlaneGeometry(w,w/4),new THREE.MeshBasicMaterial({map:t,transparent:true}));m.position.set(x,y,z);g.add(m);
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(w,w/4),new THREE.MeshBasicMaterial({map:t,transparent:true}));m.position.set(x,y,z);g.add(m);return m;
 }
-function mountain(g:THREE.Group,x:number,z:number,height:number,width:number,color:string,seed:number) {
- const shape=new THREE.Shape();shape.moveTo(-width/2,-3);
- for(let i=0;i<=24;i++){const p=i/24;const peak=Math.sin(p*Math.PI)*height*.55;shape.lineTo((p-.5)*width,peak+(Math.sin(i*2.7+seed)*.55+Math.sin(i*1.2)*.6)*Math.sin(p*Math.PI));}
- shape.lineTo(width/2,-3);const m=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshBasicMaterial({color}));m.position.set(x,-.5,z);g.add(m);
- // Narrow ice faces give the ridges an angular, glacial texture.
- for(let i=0;i<7;i++) {
-  const px=(i/7-.5)*width*.7;const h=Math.sin((i/7*.7+.15)*Math.PI)*height*.55;
-  const s=new THREE.Shape();s.moveTo(px,h);s.lineTo(px-width*.1,1);s.lineTo(px+width*.035,2);s.closePath();
-  const face=new THREE.Mesh(new THREE.ShapeGeometry(s),new THREE.MeshBasicMaterial({color:new THREE.Color(color).multiplyScalar(1.19)}));face.position.set(x,-.4,z+.03);g.add(face);
- }
+function iceRidge(group: THREE.Group, x: number, z: number, width: number, height: number, depth: number) {
+ const geometry = new THREE.BufferGeometry();
+ const vertices: number[] = [];
+ const faces = [
+  [-.56, 0, .44], [-.26, height * .64, -.09], [.02, 0, .48],
+  [-.26, height * .64, -.09], [.05, height, -.19], [.02, 0, .48],
+  [.05, height, -.19], [.27, height * .65, .04], [.02, 0, .48],
+  [.27, height * .65, .04], [.61, 0, .42], [.02, 0, .48],
+  [.05, height, -.19], [.61, 0, .42], [.51, 0, -.53],
+  [.05, height, -.19], [.51, 0, -.53], [-.56, 0, -.49],
+  [.05, height, -.19], [-.56, 0, -.49], [-.56, 0, .44],
+ ];
+ for (const [vx, y, vz] of faces) vertices.push(vx * width, y, vz * depth);
+ geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+ geometry.computeVertexNormals();
+ const ridge = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+  color: '#526a7d', roughness: 1, flatShading: true, side: THREE.DoubleSide,
+ }));
+ ridge.position.set(x, -.5, z);
+ group.add(ridge);
 }
 function lamp(g:THREE.Group,x:number,y:number,z:number) {
  box(g,x,y,z,.36,.12,.3,'#ef963d',true);
@@ -37,20 +48,39 @@ export class Levels {
   scene.add(new THREE.HemisphereLight('#a8c9de','#17212c',2.3));
   const moon=new THREE.DirectionalLight('#9cbdd6',2.1);moon.position.set(-12,18,8);scene.add(moon);
   const o=this.outside;
-  mountain(o,-18,-26,13,34,'#172c3a',2);mountain(o,12,-28,16,37,'#182e3e',4);
-  mountain(o,-10,-18,10,23,'#233d4c',6);mountain(o,20,-20,11,27,'#213a48',5);
-  mountain(o,-21,-11,6,18,'#335261',1);mountain(o,24,-12,5,19,'#2c4b5c',3);
-  box(o,0,-1,-2,110,1.9,22,'#607983');
-  // Irregular snow banks and ice shelves.
-  for(let i=0;i<32;i++) {
-   const m=new THREE.Mesh(new THREE.IcosahedronGeometry(1,0),mat(i%3?'#6f8992':'#80979d'));
-   m.position.set(i*2.6-40,-.45,-5-Math.sin(i*7)*2);m.scale.set(2.6,.5+Math.sin(i)*.2,2);o.add(m);
+  iceRidge(o, -20, -18, 20, 9, 10);
+  iceRidge(o, -12, -19, 16, 11, 12);
+  iceRidge(o, 2, -19, 23, 13, 13);
+  iceRidge(o, 16, -22, 21, 12, 11);
+  iceRidge(o, -24, -3, 15, 8, 15);
+  iceRidge(o, -24, 10, 10, 4.7, 12);
+  box(o, 4, -.71, 2, 58, 1.42, 47, '#708998');
+
+  const iceGeometry = new THREE.IcosahedronGeometry(1, 0);
+  for (let i = 0; i < 42; i++) {
+   const bank = new THREE.Mesh(iceGeometry, mat(i % 3 ? '#7693a1' : '#8ba5ac'));
+   const back = i < 24;
+   bank.position.set(back ? i * 2.3 - 23 : -10 + (i - 24) * 1.8, -.18,
+    back ? -11 - Math.sin(i * 7) * 1.55 : 11 + Math.sin(i * 4) * 2.6);
+   bank.scale.set(1.85 + Math.sin(i) * .7, .42 + Math.cos(i * 2) * .18, 1.35);
+   o.add(bank);
   }
   // Raised, corrugated research module.
-  box(o,9,2.45,-3.8,12,4.5,3.6,'#263e49');
-  box(o,9,4.8,-3.7,12.8,.3,4.3,'#8ba1a6');
-  box(o,9,4.55,-1.87,12.5,.18,.18,'#a8b7b6');
-  box(o,9,.35,-2.3,12.5,.45,3.6,'#263844');
+  const { building } = station;
+  box(o, building.x, 2.45, building.z, building.width, 4.5, building.depth, '#314955');
+  box(o, 8.5, 4.8, -5.5, 13.55, .32, 7.5, '#9ab0b7');
+  box(o, 8.5, 4.53, -1.91, 13.6, .16, .18, '#bcc9c7');
+  box(o, 8.5, .35, -5.5, 13.2, .45, 7.15, '#263844');
+  for (let i = 0; i < 17; i++) box(o, 15.015, 2.55, -8.8 + i * .4, .045, 3.95, .07, '#405863');
+  box(o, 15.055, 1.3, -5.5, .09, .35, 6.9, '#763d2c');
+  for (const z of [-7.25, -4.65]) {
+   box(o, 15.06, 3.0, z, .14, 1.48, 1.76, '#182d39');
+   box(o, 15.14, 3.0, z, .06, 1.17, 1.48, '#d17b3d', true);
+   box(o, 15.19, 3.0, z, .06, 1.35, .05, '#263640');
+   box(o, 15.18, 3.0, z, .06, .05, 1.6, '#263640');
+  }
+  box(o, 10.7, 5, -6.9, 4.3, .24, 2.05, '#738a97');
+  for (let i = 0; i < 8; i++) box(o, 9 + i * .47, 5.14, -6.9, .05, .035, 1.83, '#425965');
   for(let i=0;i<34;i++) box(o,3.25+i*.35,2.5,-1.96,.045,3.9,.065,'#3c525c');
   box(o,9,1.3,-1.84,11.9,.35,.09,'#763d2c');
   for(const x of [4.9,7.3,12.9]) {
@@ -73,41 +103,118 @@ export class Levels {
    const pts=[new THREE.Vector3(x,5,-3),new THREE.Vector3(x+5,4.3,-3),new THREE.Vector3(x+11,5,-3)];
    const curve=new THREE.CatmullRomCurve3(pts);o.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(24)),new THREE.LineBasicMaterial({color:'#142c3a'})));
   }
-  // Expedition equipment and foreground landmarks.
-  for(const [x,z] of [[-2,1],[-.5,1.2],[18,0]]) {
-   box(o,x,.47,z,1.2,.95,.9,'#344b53');box(o,x,.94,z,1.3,.1,1,'#99acaf');
-   box(o,x,.46,z+.47,.05,.7,.02,'#738b90');
+  // Equipment, packed snow and guide stakes lead to the lit doorway.
+  for (const { x, z, width, depth } of station.crates) {
+   box(o, x, .48, z, width, .96, depth, '#344b53');
+   box(o, x, .96, z, width + .08, .12, depth + .08, '#93aab1');
+   for (const offset of [-.31, .31]) box(o, x + offset, .47, z + depth / 2, .08, .82, .06, '#6c8085');
   }
-  box(o,-8.5,1.1,-2,.1,2.2,.1,'#526974');box(o,-8.5,1.8,-1.9,2.5,.7,.12,'#1d3643');label(o,'STATION 04 →',-8.5,1.8,-1.8,2.2,'#b5c5c7');
-  for(let i=0;i<25;i++) {
-   const x=i*3.6-35;box(o,x,-.02,2.6+Math.sin(i)*.3,.5,.06,.2,'#385561');
+  const trail = new THREE.Shape();
+  const trailStart = -10;
+  const trailEnd = station.entrance.x;
+  const trailLength = 24;
+  const trailZ = (fraction: number) => 5.25 - 4.6 * fraction * fraction;
+  for (let i = 0; i <= trailLength; i++) {
+   const fraction = i / trailLength;
+   const x = THREE.MathUtils.lerp(trailStart, trailEnd, fraction);
+   const z = trailZ(fraction) + .75 + Math.sin(i * 1.7) * .13;
+   if (i === 0) trail.moveTo(x, -z);
+   else trail.lineTo(x, -z);
   }
-  const indoor=this.inside;
-  box(indoor,0,3.5,-4,21,7,1,'#1c303b');box(indoor,0,-.35,-1,22,.7,9,'#34454b');
-  box(indoor,0,6.7,-1.9,22,.35,5,'#24353d');
-  for(let i=0;i<14;i++)box(indoor,-10+i*1.5,3.3,-3.43,.08,6.4,.08,'#42535a');
-  box(indoor,0,1,-3.3,20,.16,.1,'#9a633d');
-  for(const x of [-6,1,7])lamp(indoor,x,6,-2);
-  box(indoor,-8.1,1.65,-3.2,1.8,3.3,.3,'#59646a');label(indoor,'EXIT',-8.1,3.7,-2.9,1.3,'#edbb7d');
-  box(indoor,3.2,1.5,-2,5,.2,2,'#776956');
-  for(const x of [1.1,5.3])box(indoor,x,.72,-2,.15,1.4,1.7,'#273b43');
-  box(indoor,3.2,2.35,-2,1.7,1.45,1,'#101e26');box(indoor,3.2,2.4,-1.47,1.35,.94,.05,'#83bba5',true);
-  label(indoor,'87.6 MHz',3.2,2.4,-1.4,1.2,'#193e35');
-  box(indoor,3.2,1.65,-1.05,1.7,.09,.55,'#99a39a');
-  box(indoor,5,2,-2.2,1.2,.8,.7,'#2f4046');
-  for(let i=0;i<4;i++)box(indoor,4.7+i*.15,2,-1.82,.04,.5,.02,'#13262d');
-  box(indoor,-4.4,1.9,-2.7,2.2,3.8,1.2,'#33464c');
-  for(let i=0;i<5;i++)box(indoor,-4.4,.5+i*.66,-2.03,1.95,.06,.04,'#708085');
-  label(indoor,'COMMUNICATIONS',.1,5,-3.3,7,'#c0c1b0');
-  label(indoor,'NO OUTGOING SIGNAL',.1,4.35,-3.3,4,'#9a7960');
-  this.terminalLight=new THREE.PointLight('#80d9b5',5,5);this.terminalLight.position.set(3.2,2.7,-.6);indoor.add(this.terminalLight);
+  for (let i = trailLength; i >= 0; i--) {
+   const fraction = i / trailLength;
+   const z = trailZ(fraction) - .75 + Math.sin(i * 2.3) * .10;
+   trail.lineTo(THREE.MathUtils.lerp(trailStart, trailEnd, fraction), -z);
+  }
+  trail.closePath();
+  const packedSnow = new THREE.Mesh(new THREE.ShapeGeometry(trail), mat('#839da8'));
+  packedSnow.rotation.x = -Math.PI / 2;
+  packedSnow.position.y = .012;
+  o.add(packedSnow);
+  for (let i = 0; i <= trailLength; i++) {
+   const fraction = i / trailLength;
+   const x = THREE.MathUtils.lerp(trailStart, trailEnd, fraction);
+   box(o, x, .018, trailZ(fraction) + (i % 2 ? .31 : -.31), .30, .017, .17, '#6d8794').rotation.y = -.28;
+  }
+  for (const [x, z] of [[-8, 6.4], [-3, 6.1], [2, 5.35], [6.7, 3.5], [10.9, 1.75]]) {
+   box(o, x, .43, z, .07, .86, .07, '#405c6d');
+   box(o, x, .83, z, .11, .18, .11, '#ce8459', true);
+  }
+  box(o, -8.5, 1.0, 2.6, .1, 2.0, .1, '#526974');
+  box(o, -8.5, 1.65, 2.65, 2.4, .6, .12, '#1d3643');
+  label(o, 'STATION 04 →', -8.5, 1.65, 2.73, 2.2);
+
+  const indoor = this.inside;
+  // Leave the two camera-facing sides open like a cutaway model.
+  box(indoor, 0, -.65, 0, 16.5, .8, 10.5, '#263943');
+  box(indoor, 0, -.18, 0, 16.2, .36, 10.2, '#4f5d5e');
+  box(indoor, 0, 2.12, -5, 16.2, 4.24, .28, '#31434a');
+  box(indoor, -8, 2.12, 0, .28, 4.24, 10.2, '#394b52');
+  box(indoor, 0, 4.25, -5, 16.3, .17, .39, '#a08b72');
+  box(indoor, -8, 4.25, 0, .39, .17, 10.2, '#a08b72');
+  box(indoor, 0, .075, 4.98, 16.1, .15, .13, '#a68764');
+  box(indoor, 8, .075, 0, .13, .15, 10.1, '#a68764');
+
+  for (let x = -7.5; x <= 7.5; x++) {
+   for (let z = -4.5; z <= 4.5; z++) {
+    const palette = ['#536368', '#566467', '#4a5b61'];
+    box(indoor, x, .006, z, .978, .014, .978, palette[Math.abs(Math.round(x * 17 + z * 7)) % palette.length]);
+   }
+  }
+  for (let x = -7.4; x < 8; x += 1.45) {
+   box(indoor, x, 2.08, -4.83, .065, 4.03, .065, '#657476');
+  }
+  for (let z = -4.5; z < 5; z += 1.48) {
+   box(indoor, -7.82, 2.08, z, .065, 4.03, .065, '#677375');
+  }
+  box(indoor, 0, 1.06, -4.79, 16, .14, .1, '#a06e4c');
+  box(indoor, -7.79, 1.06, 0, .1, .14, 9.85, '#a06e4c');
+  for (const x of [-5.9, -.3, 6.25]) lamp(indoor, x, 3.72, -4.62);
+
+  const { exit, desk, rack, bench, terminal } = radioRoom;
+  box(indoor, exit.x, .025, exit.z, 2.04, .04, 1.24, '#9c774b');
+  box(indoor, exit.x, .047, exit.z, 1.65, .02, .87, '#34464c');
+  const exitSign = label(indoor, 'EXIT', exit.x, .063, exit.z, 1.44, '#f4bd76');
+  exitSign.rotation.x = -Math.PI / 2;
+
+  box(indoor, desk.x, 1.19, desk.z, desk.width, .23, desk.depth, '#997957');
+  for (const x of [1.05, 6]) box(indoor, x, .55, desk.z, .66, 1.1, desk.depth - .16, '#273b43');
+  box(indoor, terminal.x, 1.96, -3.54, 1.75, 1.34, .93, '#141f26');
+  box(indoor, terminal.x, 2.0, -3.055, 1.46, .94, .06, '#65bc9e', true);
+  label(indoor, '87.6 MHz', terminal.x, 2.0, -3.014, 1.35, '#1e4b3d');
+  box(indoor, terminal.x, 1.34, -2.92, 1.55, .09, .46, '#b9b1a0');
+  for (let i = 0; i < 10; i++) box(indoor, terminal.x - .59 + i * .13, 1.396, -2.89, .09, .02, .28, '#344449');
+  box(indoor, 5.24, 1.59, -3.53, 1.15, .56, .77, '#303f46');
+  for (let i = 0; i < 4; i++) box(indoor, 4.85 + i * .14, 1.6, -3.13, .038, .33, .025, '#13262d');
+  box(indoor, 5.63, 1.71, -3.12, .06, .06, .025, '#e9804e', true);
+  box(indoor, 2.12, 1.34, -3.02, .65, .05, .47, '#c6b68f').rotation.y = -.18;
+  box(indoor, 3.45, .048, -1.25, 3.66, .04, 1.72, '#3a5156');
+  box(indoor, 3.45, .073, -2.03, 3.53, .014, .045, '#a98353');
+
+  for (const x of [rack.x - .93, rack.x + .93]) {
+   box(indoor, x, 1.36, rack.z, 1.8, 2.72, rack.depth, '#273941');
+   for (let row = 0; row < 5; row++) {
+    const y = .35 + row * .48;
+    box(indoor, x, y, rack.z + .74, 1.52, .39, .045, '#506064');
+    box(indoor, x + .53, y + .045, rack.z + .77, .08, .055, .025, row % 2 ? '#e9a45a' : '#79b7a2', true);
+    box(indoor, x - .33, y, rack.z + .77, .53, .07, .024, '#17272d');
+   }
+  }
+  box(indoor, bench.x, .63, bench.z, bench.width, .2, bench.depth, '#8d7055');
+  box(indoor, bench.x, .31, bench.z, bench.width - .25, .62, bench.depth - .22, '#2d444c');
+  box(indoor, bench.x, .91, bench.z - .96, .91, .37, .66, '#495b64');
+  label(indoor, 'COMMUNICATIONS', .2, 3.47, -4.78, 6.1, '#e2cbaa');
+  label(indoor, 'KESTREL / 04', .2, 2.89, -4.77, 3.25, '#a7afa8');
+  this.terminalLight = new THREE.PointLight('#80d9b5', 5, 5);
+  this.terminalLight.position.set(terminal.x, 2.12, -2.8);
+  indoor.add(this.terminalLight);
   const count=1100;this.snowPositions=new Float32Array(count*3);
   for(let i=0;i<count;i++){this.snowPositions[i*3]=Math.random()*70-35;this.snowPositions[i*3+1]=Math.random()*19;this.snowPositions[i*3+2]=Math.random()*23-12;}
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(this.snowPositions,3));
   const c=document.createElement('canvas');c.width=c.height=16;const ctx=c.getContext('2d')!;
   const gradient=ctx.createRadialGradient(8,8,0,8,8,8);gradient.addColorStop(0,'#fff');gradient.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gradient;ctx.fillRect(0,0,16,16);
   this.batchBoxes(this.outside);this.batchBoxes(this.inside);
-  this.snow=new THREE.Points(geometry,new THREE.PointsMaterial({color:'#d5e5e9',size:2.1,map:new THREE.CanvasTexture(c),transparent:true,opacity:.65,depthWrite:false,sizeAttenuation:false}));scene.add(this.snow); 
+  this.snow=new THREE.Points(geometry,new THREE.PointsMaterial({color:'#d5e5e9',size:2.1,map:new THREE.CanvasTexture(c),transparent:true,opacity:.65,depthWrite:false,sizeAttenuation:false}));this.snow.frustumCulled = false; scene.add(this.snow);
  }
  private batchBoxes(group:THREE.Group) {
   const batches=new Map<THREE.Material,THREE.Mesh[]>();
@@ -124,6 +231,7 @@ export class Levels {
   }
  }
  update(dt:number, x:number) {
+  if (!this.outside.visible) return;
   const p=this.snowPositions;
   for(let i=0;i<p.length;i+=3) {
    p[i]-=dt*(2.3+(i%7)*.12);p[i+1]-=dt*(1.4+(i%5)*.2);

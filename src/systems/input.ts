@@ -6,7 +6,7 @@ export class Input {
     window.addEventListener('keydown', e => {
       if ((e.target as HTMLElement).closest('input, textarea, [contenteditable]')) return;
       if (e.code === 'Enter' && (e.target as HTMLElement).closest('button')) return;
-      if (['Space','ArrowLeft','ArrowRight','ArrowUp'].includes(e.code)) e.preventDefault();
+      if (['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
       if (!e.repeat) this.taps.add(e.code);
       this.keys.add(e.code);
     });
@@ -25,6 +25,11 @@ export class Input {
   }
   held(...codes: string[]) { return codes.some(c => this.keys.has(c) || [...this.touch.values()].includes(c)); }
   pressed(...codes: string[]) { let result = false; codes.forEach(c => { if(this.taps.delete(c)) result = true; }); return result; }
-  get axis() { return Number(this.held('KeyD','ArrowRight')) - Number(this.held('KeyA','ArrowLeft')); }
+  get right() {
+    return Number(this.held('KeyD', 'ArrowRight')) - Number(this.held('KeyA', 'ArrowLeft'));
+  }
+  get down() {
+    return Number(this.held('KeyS', 'ArrowDown')) - Number(this.held('KeyW', 'ArrowUp'));
+  }
   clear() { this.keys.clear(); this.taps.clear(); this.touch.clear(); document.querySelectorAll('.held').forEach(e=>e.classList.remove('held')); }
 }
