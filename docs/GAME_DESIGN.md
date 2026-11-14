@@ -20,7 +20,7 @@ The details below spoil the campaign. The canonical text, access conditions, and
 
 | Chapter | Area and objective | Key clue or solution |
 | --- | --- | --- |
-| 1. The Arrival | Station yard → radio room. Listen on 87.6 MHz and archive the conversation. | The unknown speaker says Voss arrived three days ago. The radio log opens crew access. |
+| 1. The Arrival | Station yard → radio room. Tune the receiver to 87.6 MHz (a dial; static fades near the target) and archive the conversation. | The unknown speaker says Voss arrived three days ago. The radio log opens crew access. |
 | 2. The Missing Crew | Read Mara's roster in the crew quarters, light the scuffed floor, open her locker. | BRAVO → DELTA → ALPHA. The recording identifies the yard fuse cache and the annex. |
 | 2. The Missing Crew | Retrieve the fuse, read the annex service card, restore power, then open the dispatch. | Heater → Pump → Antenna → Lights. The dispatch describes a short, short, long pulse pattern. |
 | 3. Three Returns | Calibrate the three ridge relays, read the survey board, then triangulate at the receiver. | West 87.8, center 88.6, east 87.7 MHz. Set short, short, long on each. Bearings 12°, 38°, and 81° correspond to Borehole Nine. |
@@ -28,7 +28,7 @@ The details below spoil the campaign. The canonical text, access conditions, and
 | 5. The Listening Chamber | Read the depth chart, stabilize the dampers, unlock the interlock, retrieve the routing transcript, reverse the signal. | Start at +3 and apply −2, +1, −2. Use depth 090 at the interlock. Route East → Center → West at the final desk. |
 | 5. The Listening Chamber | Choose the final transmission. | Seal the chamber and see the station clock advance, or warn the coast and learn that it received the same warning yesterday. |
 | 6. The Coast Road | Take the lift up, follow the erased road from the crevasse to Halvard coast station, read the operator’s log (text depends on the ending), read the tide board, open the boathouse. | Tide 2 dm at 00:00, +3 every six hours until 12:00, then falling: 5 → 8 → 5. |
-| 6. The Coast Road | Cut the mast lamp feeds, then answer the hut radio. | Lamps from the top are red, white, green; cut bottom, top, middle: Green → Red → White. Ask the caller what she called the dog. The epilogue differs by ending and adds a line if Mara’s letter was found. |
+| 6. The Coast Road | Cut the mast lamp feeds, then answer the radio inside the hut. | Lamps from the top are red, white, green; cut bottom, top, middle: Green → Red → White. Ask the caller what she called the dog. Then choose: pull the fuse (silence), keep listening (the loop holds), or — only with all 13 discoveries — read it the roll call (hidden outcome, the witnesses). |
 
 Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figures came from**, **Service bulletin 09**, **A familiar bootprint**, **Cassette B**, **The erased road**, **Mara’s unsent letter**, **The torn name tag** (coast boathouse, after the tide lock), and a cross-area chain: **Tally marks** (annex), **Three sleeping bags** (crevasse sled) and **Six chairs** (Borehole Nine) unlock **The roll call** at the coast radio hut. Props in each area mark where these traces are. Their text lives in [progress.ts](../src/systems/progress.ts). The player can continue exploring after the ending.
 
@@ -43,6 +43,8 @@ Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figure
 ## Next development priorities
 
 Status as of November 2026: `npm run pacing` estimates the critical path at about 21 minutes (Chapters 01–05 about 15, Chapter 06 about 5) before optional evidence, hazards and retries. Every puzzle and both endings pass a scripted browser run ([browser-check.js](../scripts/browser-check.js)), and layouts were checked at 375×812 and 320×640.
+
+Also in place: title menu and settings, key remapping, gamepad, sound captions, story/normal/hard difficulty, storms, flashlight battery, figures that follow footprints, the coast radio hut, three coast outcomes, New Game+, ten achievements, chapter splits, Field Notes pictograms, a Russian translation and offline play (PWA).
 
 1. Time a blind desktop and mobile playthrough from a fresh checkpoint. Record time by chapter, wrong turns, puzzle stalls, and hazard recoveries, then tune for the 30-minute target. Add play value through decisions and interactions where chapters are short.
 2. ~~Verify every puzzle and both endings in a browser.~~ Done by script. Still open: real touch input on a phone, and listening to the new ambience and heartbeat on actual speakers.

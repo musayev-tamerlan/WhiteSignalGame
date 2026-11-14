@@ -20,8 +20,11 @@ Vite serves the game at http://localhost:5173/WhiteSignalGame/. Production deplo
 
 ## Verification and known limits
 
+- Translations: story data stays in English and English strings are the keys of [ru.ts](../src/i18n/ru.ts). After adding or changing text, run `npm run strings`; `npm test` fails if a story string has no Russian line. Interface text goes through `t()`/`tf()` in code or `data-i18n` in [ui.ts](../src/ui.ts).
+- Input is action based ([settings.ts](../src/systems/settings.ts)): use `input.pressed('interact')`, not key codes. Touch buttons use `data-control="<action>"`; the gamepad maps to the same actions.
+- Saves now also store `splits`, `cycle` (New Game+) and `coda` (the Chapter 06 choice). All are optional and validated on load.
 - `npm run pacing` walks the objective route on the collision grid and prints an estimated time per chapter.
-- In `npm run dev`, `window.whiteSignal` exposes `state`, `go(area, x, z)`, `grant(...milestones)` and `tick(frames)`. It is stripped from production builds. [browser-check.js](../scripts/browser-check.js) uses it to play both endings and collect all evidence with real key events.
+- In `npm run dev`, `window.whiteSignal` exposes `state`, `go(area, x, z)`, `grant(...milestones)`, `close()`, `field` and `tick(frames)`; press ` for the collision overlay. It is stripped from production builds. [browser-check.js](../scripts/browser-check.js) uses it to play both endings and collect all evidence with real key events.
 
 - The tests cover movement, grounded thin ice, exposure and beacon recovery, migration of the original radio checkpoint, objective prerequisites through the ending choice, and collision-aware reachability of prompts and portals.
 - Browser smoke checks covered loading an earlier checkpoint, the radio room, the map, the station yard, the crew quarters, and locker puzzle feedback. Full timed playthroughs of both endings and a comprehensive mobile/audio pass remain the next verification tasks.
