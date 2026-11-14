@@ -1,9 +1,11 @@
-import { expedition, heaters, thinIce, type Area } from '../world/expedition-layout';
+import { expedition, heaters, iceSheets, isFieldArea, type Area, type FieldArea } from '../world/expedition-layout';
 import { canStandAt, type Body, type GroundPoint } from './movement';
 
-const patrols: Record<'ridge' | 'crevasse', GroundPoint[]> = {
+const patrols: Record<FieldArea, GroundPoint[]> = {
   ridge: [{ x: -15, z: -1 }, { x: -9, z: 3 }, { x: 0, z: 1 }, { x: 5, z: 7 }],
   crevasse: [{ x: 4, z: 2 }, { x: 7, z: .5 }, { x: 12, z: -2 }, { x: 19, z: 2 }],
+  // The shore figure walks between the boathouse and the radio hut.
+  coast: [{ x: -2, z: -9 }, { x: 4, z: -6 }, { x: 12, z: -9.5 }, { x: 18, z: -7 }, { x: 8, z: 1 }],
 };
 
 const distance = (a: GroundPoint, b: GroundPoint) => Math.hypot(a.x - b.x, a.z - b.z);
@@ -19,7 +21,7 @@ export class FieldConditions {
   private trail?: GroundPoint;
 
   reset(area: Area) {
-    const exposed = area === 'ridge' || area === 'crevasse';
+    const exposed = isFieldArea(area);
     this.warm = 100;
     this.alert = this.ice = 0;
     this.shelter = false;
@@ -30,13 +32,13 @@ export class FieldConditions {
   }
 
   tick(area: Area, body: Body, speed: number, flashlight: boolean, dt: number) {
-    if ((area !== 'ridge' && area !== 'crevasse') || !this.figure) return;
+    if (!isFieldArea(area) || !this.figure) return;
     const heater = heaters[area].find(point => distance(body, point) <= 2.6);
     this.shelter = Boolean(heater);
     if (heater) this.checkpoint = heater;
     this.warm = Math.min(100, Math.max(0, this.warm + dt * (heater ? 26 : speed > 3.5 ? -.75 : -.52)));
 
-    const thin = area === 'crevasse' && body.grounded && thinIce.some(sheet =>
+    const thin = body.grounded && iceSheets[area].some(sheet =>
       Math.abs(body.x - sheet.x) < sheet.width / 2 && Math.abs(body.z - sheet.z) < sheet.depth / 2);
     this.ice = thin ? Math.min(1, this.ice + dt / .75) : 0;
     if (this.ice >= 1) return this.recover('The ice broke. You pulled yourself back to the last heated beacon.');

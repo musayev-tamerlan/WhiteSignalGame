@@ -22,6 +22,7 @@ Vite serves the game at http://localhost:5173/WhiteSignalGame/. Production deplo
 
 - The tests cover movement, grounded thin ice, exposure and beacon recovery, migration of the original radio checkpoint, objective prerequisites through the ending choice, and collision-aware reachability of prompts and portals.
 - Browser smoke checks covered loading an earlier checkpoint, the radio room, the map, the station yard, the crew quarters, and locker puzzle feedback. Full timed playthroughs of both endings and a comprehensive mobile/audio pass remain the next verification tasks.
+- Chapter 06 (Halvard coast station) unlocks after either ending via the `coast-road` portal in the crevasse. Coast hotspots use `afterEnding` in [story.ts](../src/world/story.ts); the operator’s log has one variant per ending. Field hazards, heaters, and thin ice are keyed by `FieldArea` in [expedition-layout.ts](../src/world/expedition-layout.ts). Completing `caller` plays `coastEpilogue` and stops the active-time clock. Checkpoints saved after an ending continue into the chapter.
 - The expedition is playable through two endings. Its 30-minute goal is a pacing estimate, and the figure behavior, environmental art, and synthesized footsteps are ready for tuning. Vite emits its existing bundle size advisory for the Three.js build.
 
 See [ASSETS.md](ASSETS.md) for code-generated assets and committed screenshots.

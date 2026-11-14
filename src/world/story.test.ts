@@ -5,13 +5,13 @@ import { freshSave, loadSave } from '../systems/save';
 import { archive } from '../systems/progress';
 import type { Area } from './expedition-layout';
 import { walkAreas } from './layout';
-import { available, currentObjective, endings, hotspots, routeTarget } from './story';
+import type { Save } from '../systems/save';
+import { available, coastEpilogue, currentObjective, endings, hotspots, routeTarget } from './story';
 
-test('a fresh expedition has a reachable route to both endings', () => {
-  const save = freshSave();
-  const visited = new Set<string>();
+function followObjectives(save: Save, visited: Set<string>) {
   for (let i = 0; i < 80; i++) {
     const objective = currentObjective(save);
+    if (!objective.target) return;
     const target = routeTarget(save, objective.target);
     assert.ok(target, objective.text);
     assert.equal(save.level, target.area);
@@ -23,16 +23,54 @@ test('a fresh expedition has a reachable route to both endings', () => {
     assert.equal(target.id, objective.target);
     assert.ok(!visited.has(target.id));
     visited.add(target.id);
-    if (target.finale) break;
+    if (target.finale) return;
     assert.ok(target.proof, target.id);
     save.progress.push(target.proof);
   }
+  assert.fail('objective chain did not finish');
+}
+
+test('a fresh expedition reaches both endings and the coast epilogue', () => {
+  const save = freshSave();
+  const visited = new Set<string>();
+  followObjectives(save, visited);
   assert.ok(visited.has('decision'));
   for (const ending of Object.keys(endings) as (keyof typeof endings)[]) {
-    save.ending = ending;
-    assert.equal(currentObjective(save).target, '');
+    const branch: Save = { ...save, progress: [...save.progress], evidence: [], ending };
+    const coast = new Set<string>();
+    followObjectives(branch, coast);
+    assert.equal(branch.level, 'coast');
+    assert.ok(coast.has(`coast-log-${ending}`));
+    assert.ok(!coast.has(`coast-log-${ending === 'seal' ? 'send' : 'seal'}`));
+    assert.ok(coast.has('caller'));
+    assert.equal(currentObjective(branch).target, '');
+    assert.equal(coastEpilogue(branch).length, 3);
+    assert.equal(coastEpilogue({ ...branch, evidence: ['letter'] }).length, 4);
   }
   assert.deepEqual(hotspots.flatMap(spot => spot.record ? [spot.record] : []).sort(), Object.keys(archive).sort());
+});
+
+test('coast hotspots stay hidden until the borehole choice is made', () => {
+  const save = freshSave();
+  save.progress.push('reverse');
+  for (const spot of hotspots.filter(spot => spot.afterEnding)) assert.equal(available(save, spot), false, spot.id);
+});
+
+test('a completed checkpoint from before the coast chapter continues into it', () => {
+  const previousStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: { getItem: () => JSON.stringify({ level: 'borehole', x: -13, z: 7, progress: ['override', 'reverse'], evidence: [], ending: 'send', elapsed: 1500 }) },
+  });
+  try {
+    const save = loadSave();
+    assert.equal(save.ending, 'send');
+    assert.equal(currentObjective(save).target, 'coast-log-send');
+    assert.equal(routeTarget(save, 'coast-log-send')?.id, 'lift-return');
+  } finally {
+    if (previousStorage) Object.defineProperty(globalThis, 'localStorage', previousStorage);
+    else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
 });
 
 test('all prompts and portals are reachable from their area entry points', () => {

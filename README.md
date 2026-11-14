@@ -39,11 +39,11 @@ Deploy the `dist/` directory to any static host. No environment variables or bac
 
 Touch controls appear on phones, tablets, and narrow screens. Hold the directional pad to move, RUN to sprint, and ⤒ to jump. For puzzles, tap an answer or press its number on the keyboard.
 
-Follow the amber marker to the radio room and listen to the transmission. The journey continues through seven connected areas, including the crew quarters, power annex, relay ridge, glacier trench, and Borehole Nine. Field Notes preserves the clues you’ll need for later puzzles.
+Follow the amber marker to the radio room and listen to the transmission. The journey continues through eight connected areas, including the crew quarters, power annex, relay ridge, glacier trench, Borehole Nine, and — after the final choice — Halvard coast station. Field Notes preserves the clues you’ll need for later puzzles.
 
 Running and using the flashlight can give away your position around the figures. Rewarm and set a recovery point at heated beacons. Sprint and jump across yellow-striped thin ice, or take the longer route around it. Cracking ice, whiteouts, and encounters send you back to the last beacon with your discoveries intact.
 
-The five chapters, eight optional discoveries, and two possible endings are designed around a roughly 30-minute first playthrough. Actual playtime depends on exploration and puzzle solving. The ending screen reports active time.
+The six chapters, nine optional discoveries, two possible endings, and the coastal epilogue chapter are designed around a roughly 40-minute first playthrough. Actual playtime depends on exploration and puzzle solving. The ending screen reports active time.
 
 Checkpoints from the earlier side-scrolling version restore on a clear part of the map. Progress, location, and flashlight state save to browser localStorage every five active seconds, on level changes, after the transmission, and when leaving the tab. Saves are local to the browser/origin. Storage failures do not prevent play. Restart Expedition in the pause menu resets the checkpoint. The game freezes while the tab is hidden.
 

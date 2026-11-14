@@ -2,6 +2,7 @@ export const milestones = [
   'heard', 'manifest', 'footprints', 'locker', 'fuse', 'serviceCard', 'power', 'dispatch',
   'west', 'center', 'east', 'survey', 'triangulated', 'recorder', 'echo', 'override',
   'depth', 'dampers', 'chamber', 'transcript', 'reverse',
+  'coastLog', 'tideBoard', 'feedKey', 'mast', 'caller',
 ] as const;
 export type Milestone = typeof milestones[number];
 
@@ -14,6 +15,7 @@ export const archive = {
   cassette: { title: 'Cassette B', text: 'A child counts backward from nine. When the tape ends, the counting continues for another second.' },
   map: { title: 'The erased road', text: 'The relief map once showed a second route to the coast. The erased part is still warm to the touch.' },
   letter: { title: 'Mara’s unsent letter', text: '“If you hear me again, ask what I called the dog. If I answer, you’re listening to the wrong Mara. I never had a dog.”' },
+  tag: { title: 'The torn name tag', text: 'A survival suit hangs in the boathouse, still wet from the sea. Its torn name tag is in the pocket. It reads VOSS.' },
 } as const;
 export type ArchiveId = keyof typeof archive;
 export type Ending = 'seal' | 'send';

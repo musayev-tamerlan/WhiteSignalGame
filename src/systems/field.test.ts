@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { expedition, heaters, thinIce } from '../world/expedition-layout';
+import { expedition, heaters, seaIce, thinIce } from '../world/expedition-layout';
 import type { Body, GroundPoint } from './movement';
 import { FieldConditions } from './field';
 
@@ -42,4 +42,13 @@ test('a whiteout returns the player to the trail entry when no other heater has 
   field.warm = .01;
   const outcome = field.tick('ridge', body({ x: 31, z: 14 }), 0, false, 1 / 60 * 2);
   assert.deepEqual(outcome?.checkpoint, expedition.ridge.spawn);
+});
+
+test('coast sea ice cracks and the shore figure starts on open ground', () => {
+  const field = new FieldConditions();
+  field.reset('coast');
+  assert.ok(field.figure);
+  let failure;
+  for (let i = 0; i < 55 && !failure; i++) failure = field.tick('coast', body(seaIce[0]), 0, false, 1 / 60);
+  assert.deepEqual(failure?.checkpoint, expedition.coast.spawn);
 });

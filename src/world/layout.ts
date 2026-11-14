@@ -31,6 +31,7 @@ export const walkAreas: Record<Area, WalkArea> = {
   ridge: expedition.ridge.walk,
   crevasse: expedition.crevasse.walk,
   borehole: expedition.borehole.walk,
+  coast: expedition.coast.walk,
   inside: {
     minX: -7.5, maxX: 7.5, minZ: -4.55, maxZ: 4.55,
     obstacles: [radioRoom.desk, radioRoom.rack, radioRoom.bench],

@@ -26,6 +26,8 @@ export interface Hotspot extends GroundPoint {
   puzzle?: Puzzle;
   finale?: boolean;
   needsLight?: boolean;
+  /** Only available after the Borehole Nine choice; a specific ending narrows it to that outcome. */
+  afterEnding?: Ending | true;
 }
 
 const backToStation = (point: GroundPoint) => ({ area: 'outside' as const, point });
@@ -45,6 +47,28 @@ export const endings: Record<Ending, Line[]> = {
     ['FIELD LOG', 'The glacier goes quiet. A minute later, a new transmission comes from the coast. You recognize your own breathing.'],
   ],
 };
+
+const coastLog = (ending: Ending, lines: Line[]) => event('coast', `coast-log-${ending}`, 'Read the coast operator’s logbook', 18, -9.6, {
+  afterEnding: ending, proof: 'coastLog',
+  lines: [
+    ...lines,
+    ['COAST LOG · ILSE BRANDT', 'Something is still answering our call sign from the mast. I locked the feed key in the boathouse. The lock is set to the tide, like always.'],
+  ],
+});
+
+/** The coast epilogue reflects the Borehole Nine choice and whether Mara’s letter was found. */
+export function coastEpilogue(save: Save): Line[] {
+  return [
+    save.ending === 'seal'
+      ? ['FIELD LOG', 'You pull the hut set’s fuse. Outside, one set of footprints leads from the boathouse to the open water and does not come back.']
+      : ['FIELD LOG', 'You pull the hut set’s fuse. Tomorrow’s page in the coast log is already filled in, in your handwriting: “Warning received. We listened.”'],
+    ...save.evidence.includes('letter')
+      ? [['VOSS', 'Mara wrote the letter so I would know her by what she left out. The signal only learns what we say aloud.'] as Line]
+      : [],
+    ['THE SIGNAL', 'Then I will learn silence next.'],
+    ['FIELD LOG', 'August 18, 1987. 03:14 UTC. For the first time in four days, nothing on 87.6 MHz.'],
+  ];
+}
 
 export const hotspots: Hotspot[] = [
   event('outside', 'entrance', 'Enter radio room', station.entrance.x, station.entrance.z, {
@@ -168,6 +192,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('crevasse', 'cassette', 'Listen to the loose cassette', -3, -13, { record: 'cassette' }),
   event('crevasse', 'map', 'Unfold the relief map', 23, 11, { record: 'map' }),
+  event('crevasse', 'coast-road', 'Follow the erased road to the coast', -27, -16, { afterEnding: true, destination: destination('coast') }),
   event('crevasse', 'lift', 'Take the lift to Borehole Nine', 26, -13, { requires: ['override'], destination: destination('borehole') }),
   event('borehole', 'lift-return', 'Take the lift back to the crevasse', -13, 8.4, { destination: { area: 'crevasse', point: { x: 24, z: -13 } } }),
   event('borehole', 'depth', 'Read the drill depth chart', -10, -4, {
@@ -209,13 +234,64 @@ export const hotspots: Hotspot[] = [
     radius: 1.65, requires: ['reverse'], finale: true,
   }),
   event('borehole', 'letter', 'Read the unsent letter', 10, 3.45, { record: 'letter' }),
+  event('coast', 'coast-return', 'Follow the road back to the crevasse', -29.5, 16.5, { destination: { area: 'crevasse', point: { x: -25.5, z: -14.5 } } }),
+  coastLog('seal', [
+    ['COAST LOG · AUG 17', '03:15. Kestrel carrier dropped. First silence on 87.6 MHz in three days.'],
+    ['COAST LOG · AUG 17', '03:40. Footprints came up the erased road. One set. Nobody walked back down it.'],
+    ['VOSS', 'Sealing the chamber stopped the glacier. It didn’t stop whatever had already walked out of it.'],
+  ]),
+  coastLog('send', [
+    ['COAST LOG · AUG 16', '03:14. Warning from Dr. Voss, Kestrel: destroy anything on 87.6 MHz. If he calls us by name, do not answer.'],
+    ['COAST LOG · AUG 17', '03:14. The same warning, word for word. We listened this time. The mast kept transmitting anyway.'],
+    ['VOSS', 'My warning arrived a day before I sent it. The signal is using the coast to rehearse.'],
+  ]),
+  event('coast', 'tide-board', 'Read the inlet tide board', -4, -8.6, {
+    afterEnding: true, proof: 'tideBoard',
+    lines: [
+      ['TIDE BOARD', 'Halvard inlet, August 17. Low water, 2 decimeters, at 00:00. The tide rises 3 decimeters every six hours until 12:00, then falls at the same rate.'],
+      ['VOSS', 'Ilse set the boathouse lock to the tide. It has a dial for each reading after midnight.'],
+    ],
+  }),
+  event('coast', 'boathouse', 'Open the boathouse tide lock', -12, -9.6, {
+    afterEnding: true, requires: ['coastLog', 'tideBoard'], proof: 'feedKey',
+    puzzle: { title: 'Boathouse tide lock', hint: 'Set one dial for each tide reading at 06:00, 12:00, and 18:00. The tide board is saved in Field Notes.', choices: ['2', '5', '8', '11'], answer: [1, 2, 1], feedback: 'count' },
+    lines: [
+      ['BOATHOUSE', 'The mast feed key hangs beside a survival suit. Someone tore off its name tag.'],
+      ['ILSE · TAPED NOTE', 'Mast lamps from the top: red, white, green. The echo climbs the mast, so starve it from below. Bottom feed first, then the top. The middle goes last.'],
+      ['ILSE · TAPED NOTE', 'If anyone calls the hut using a crew name, ask Mara’s question. She told me on the 14th: “Ask what I called the dog. I never had a dog.”'],
+    ],
+  }),
+  event('coast', 'suit', 'Search the survival suit', -16.6, -9.6, { afterEnding: true, requires: ['feedKey'], record: 'tag' }),
+  event('coast', 'mast', 'Cut the mast lamp feeds', 4, 12.4, {
+    afterEnding: true, requires: ['feedKey'], proof: 'mast',
+    puzzle: { title: 'Mast feed cutoff', hint: 'Cut the three lamp feeds in Ilse’s order. Her note is saved in Field Notes.', choices: ['Red', 'White', 'Green'], answer: [2, 0, 1], feedback: 'prefix' },
+    lines: [
+      ['COAST MAST', 'The lamps go dark from the bottom up. For a moment the middle one relights by itself, then stays out.'],
+      ['RADIO HUT', 'Incoming call on the hut set. Caller ID: KESTREL / SATO.'],
+    ],
+  }),
+  event('coast', 'caller', 'Answer the hut radio', 23, -9.6, {
+    afterEnding: true, requires: ['mast'], proof: 'caller',
+    puzzle: { title: 'Verify the caller', hint: 'The caller says she is Mara Sato and asks you to reopen the mast. Ask the question she left with Ilse before you answer.', choices: ['Ask where she is', 'Ask what she called the dog', 'Ask what day it is'], answer: [1], feedback: 'prefix' },
+    lines: [
+      ['CALLER', 'His name was Pilot. You used to throw snow for him, Elias. Open the mast and I’ll come home.'],
+      ['VOSS', 'Mara never had a dog.'],
+      ['CALLER', 'Then tell me what she had. I’m still learning her.'],
+    ],
+  }),
 ];
 
 export function has(save: Save, flag: Milestone) {
   return save.progress.includes(flag);
 }
 
+/** Whether this spot belongs to the player’s outcome. Used for prompts and Field Notes. */
+export function matchesEnding(save: Save, hotspot: Hotspot) {
+  return !hotspot.afterEnding || Boolean(save.ending) && (hotspot.afterEnding === true || hotspot.afterEnding === save.ending);
+}
+
 export function available(save: Save, hotspot: Hotspot) {
+  if (!matchesEnding(save, hotspot)) return false;
   if (hotspot.record && save.evidence.includes(hotspot.record)) return false;
   if (hotspot.proof && hotspot.proof !== 'heard' && has(save, hotspot.proof)) return false;
   if (hotspot.finale && save.ending) return false;
@@ -242,8 +318,21 @@ const objectives: [Milestone, string, string][] = [
   ['reverse', 'Reverse the return channels', 'reverse'],
 ];
 
+const coastObjectives: [Milestone, string, string][] = [
+  ['coastLog', 'Reach the coast and read the operator’s log at the radio hut', 'coast-log'],
+  ['tideBoard', 'Read the inlet tide board', 'tide-board'],
+  ['feedKey', 'Use the tide readings to open the boathouse', 'boathouse'],
+  ['mast', 'Cut the coast mast’s lamp feeds', 'mast'],
+  ['caller', 'Answer the call on the hut radio', 'caller'],
+];
+
 export function currentObjective(save: Save) {
-  if (save.ending) return { text: 'Expedition complete · Explore for remaining evidence', target: '' };
+  if (save.ending) {
+    for (const [flag, text, target] of coastObjectives) {
+      if (!has(save, flag)) return { text, target: target === 'coast-log' ? `coast-log-${save.ending}` : target };
+    }
+    return { text: 'Expedition complete · Explore for remaining evidence', target: '' };
+  }
   for (const [flag, text, target] of objectives) {
     if (has(save, flag)) continue;
     if (flag === 'triangulated') {
@@ -257,6 +346,7 @@ export function currentObjective(save: Save) {
 }
 
 export function chapter(save: Save) {
+  if (save.ending) return { number: '06', title: 'THE COAST ROAD' };
   if (has(save, 'override')) return { number: '05', title: 'THE LISTENING CHAMBER' };
   if (has(save, 'triangulated')) return { number: '04', title: 'THE CREVASSE' };
   if (has(save, 'dispatch')) return { number: '03', title: 'THREE RETURNS' };

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { radioRoom, station } from './layout';
-import { expedition, expeditionAreas, heaters, outbuildings, thinIce, type Area, type ExpeditionArea } from './expedition-layout';
+import { expedition, expeditionAreas, heaters, iceSheets, isFieldArea, outbuildings, type Area, type ExpeditionArea } from './expedition-layout';
 import { hotspots } from './story';
 const materials = new Map<string,THREE.MeshStandardMaterial>();
 function mat(color:string,glow=false) {
@@ -54,13 +54,23 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
  const depth = config.walk.maxZ - config.walk.minZ + 1;
  const outdoor = config.snow;
  box(group, 0, -.38, 0, width + (outdoor ? 24 : .4), .76, depth + (outdoor ? 24 : .4),
-  outdoor ? area === 'ridge' ? '#758c9b' : '#536f83' : '#526368');
+  outdoor ? area === 'ridge' ? '#758c9b' : area === 'coast' ? '#6f8a96' : '#536f83' : '#526368');
 
- if (outdoor) {
+ if (area === 'coast') {
+  // Open water beyond the western shore, with drifting floes.
+  box(group, config.walk.minX - 13, -.3, 0, 24, .62, depth + 26, '#16303f');
+  for (let i = 0; i < 14; i++) {
+   box(group, config.walk.minX - 3 - (i % 4) * 4.5, -.02, -18 + i * 2.9 + Math.sin(i * 3) * 1.2,
+    1.6 + (i % 3) * .7, .12, 1.1 + (i % 2) * .6, i % 2 ? '#9cb5bf' : '#7e9ba7');
+  }
+  box(group, config.walk.minX - .2, .01, 0, .5, .05, depth, '#a9bfc6');
+ }
+
+ if (isFieldArea(area)) {
   for (let i = 0; i < 9; i++) {
    iceRidge(group, -width / 2 + i * 9, -depth / 2 - 5 + Math.sin(i) * 2, 12, 5 + i % 4, 9);
   }
-  for (const point of heaters[area === 'ridge' ? 'ridge' : 'crevasse']) {
+  for (const point of heaters[area]) {
    box(group, point.x, .04, point.z, 3.1, .08, 3.1, '#86634d');
    box(group, point.x, .72, point.z - .85, 1.35, 1.4, .78, '#853f2d');
    box(group, point.x, .76, point.z - .44, 1.1, .39, .06, '#ff9d43', true);
@@ -69,14 +79,15 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
    group.add(glow);
    floorSign(group, 'HEAT', point.x, point.z + .95, 1.65);
   }
-  if (area === 'crevasse') for (const sheet of thinIce) {
-   box(group, sheet.x, .015, sheet.z, sheet.width, .03, sheet.depth, '#447383');
+  for (const sheet of iceSheets[area]) {
+   box(group, sheet.x, .015, sheet.z, sheet.width, .03, sheet.depth, area === 'coast' ? '#3d6c80' : '#447383');
    const borders = [sheet.x - sheet.width / 2, sheet.x + sheet.width / 2];
    for (const x of borders) for (let z = sheet.z - sheet.depth / 2; z <= sheet.z + sheet.depth / 2; z += .8) {
     box(group, x, .039, z, .11, .03, .46, '#e9b465');
    }
   }
- } else {
+ }
+ if (!outdoor) {
   box(group, 0, 1.85, -depth / 2, width + .3, 3.7, .24, '#263a44');
   box(group, -width / 2, 1.85, 0, .24, 3.7, depth, '#31454e');
   box(group, 0, 3.74, -depth / 2, width + .45, .13, .37, '#9c835f');
@@ -90,8 +101,15 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
   label(group, config.title.toUpperCase(), 0, 2.7, -depth / 2 + .18, 6);
  }
 
- for (const { kind, x, z, width: w, depth: d } of config.walk.obstacles) {
-  if (kind === 'rock') {
+ for (const { kind, x, z, width: w, depth: d, name } of config.walk.obstacles) {
+  if (kind === 'hut') {
+   box(group, x, 1.45, z, w, 2.9, d, name === 'BOATHOUSE' ? '#4d4740' : '#3a505d');
+   box(group, x, 2.98, z, w + .3, .26, d + .3, '#a6b6ba');
+   box(group, x - w / 4, 1.05, z + d / 2 + .06, 1.3, 2.1, .16, '#263a45');
+   box(group, x + w / 4, 1.7, z + d / 2 + .05, 1.3, .9, .1, '#dd862f', true);
+   label(group, name ?? '', x, 2.45, z + d / 2 + .1, Math.min(6, w - .8));
+   lamp(group, x - w / 4, 2.25, z + d / 2 + .14);
+  } else if (kind === 'rock') {
    iceRidge(group, x, z, w * .89, 2.9 + w * .26, d);
    box(group, x, .13, z, w, .29, d, '#587180');
   } else if (kind === 'bed') {
@@ -140,11 +158,12 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
   if (spot.area !== area) continue;
   if (spot.destination) {
    box(group, spot.x, .025, spot.z, 2.2, .05, 1.6, '#9e7e55');
-   floorSign(group, spot.id === 'trench' ? 'TRENCH' : spot.id === 'lift' ? 'LIFT' : 'EXIT', spot.x, spot.z, 1.9);
+   const signs: Record<string, string> = { trench: 'TRENCH', lift: 'LIFT', 'coast-road': 'ROAD', 'coast-return': 'ROAD' };
+   floorSign(group, signs[spot.id] ?? 'EXIT', spot.x, spot.z, 1.9);
   } else if (spot.record || spot.id === 'recorder') {
    box(group, spot.x, .16, spot.z, .52, .32, .42, '#59717d');
    box(group, spot.x, .34, spot.z, .37, .055, .28, '#d6c6a2');
-  } else if (spot.id !== 'decision' && spot.id !== 'reverse') {
+  } else if (spot.id !== 'decision' && spot.id !== 'reverse' && spot.id !== 'coast-log-send') {
    floorSign(group, spot.id === 'power' ? 'BREAKERS' : spot.id === 'chamber' ? 'INTERLOCK' : '• • •',
     spot.x, spot.z, spot.id === 'chamber' ? 2.4 : 1.65);
   }
@@ -379,6 +398,6 @@ export class Levels {
    }
    if (group) group.visible = area === key;
   }
-  this.snow.visible = area === 'outside' || area === 'ridge' || area === 'crevasse';
+  this.snow.visible = area === 'outside' || isFieldArea(area);
  }
 }

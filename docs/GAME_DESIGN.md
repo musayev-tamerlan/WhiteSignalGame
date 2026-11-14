@@ -2,7 +2,7 @@
 
 An isometric survival mystery set at Kestrel Station, Antarctica, on August 17, 1987. Dr. Elias Voss arrives to investigate a station that stopped responding at 03:14 UTC. A voice on 87.6 MHz insists he arrived three days earlier. Logs, stray objects, and footprints suggest an experiment beneath the ice is learning to imitate the researchers and replay their decisions.
 
-The first campaign is a complete playable expedition with five chapters, seven connected areas, eight optional discoveries, and two endings. The target is a roughly 30-minute first playthrough with exploration and clue solving. That is a design target pending timed playtests. The next campaign can continue from either ending.
+The first campaign is a complete playable expedition with six chapters, eight connected areas, nine optional discoveries, and two endings followed by a coastal epilogue chapter. The target is a roughly 30-minute playthrough to the Borehole Nine choice, plus about 8–10 minutes for Chapter 06. That is a design target pending timed playtests.
 
 ## What the player does
 
@@ -27,8 +27,10 @@ The details below spoil the campaign. The canonical text, access conditions, and
 | 4. The Crevasse | Find Mara's recorder, unlock the emergency receiver, release the lift. | Reverse low, high, middle to get middle → high → low. Use the badge at the lift override. Thin ice can be jumped or bypassed. |
 | 5. The Listening Chamber | Read the depth chart, stabilize the dampers, unlock the interlock, retrieve the routing transcript, reverse the signal. | Start at +3 and apply −2, +1, −2. Use depth 090 at the interlock. Route East → Center → West at the final desk. |
 | 5. The Listening Chamber | Choose the final transmission. | Seal the chamber and see the station clock advance, or warn the coast and learn that it received the same warning yesterday. |
+| 6. The Coast Road | Take the lift up, follow the erased road from the crevasse to Halvard coast station, read the operator’s log (text depends on the ending), read the tide board, open the boathouse. | Tide 2 dm at 00:00, +3 every six hours until 12:00, then falling: 5 → 8 → 5. |
+| 6. The Coast Road | Cut the mast lamp feeds, then answer the hut radio. | Lamps from the top are red, white, green; cut bottom, top, middle: Green → Red → White. Ask the caller what she called the dog. The epilogue differs by ending and adds a line if Mara’s letter was found. |
 
-Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figures came from**, **Service bulletin 09**, **A familiar bootprint**, **Cassette B**, **The erased road**, and **Mara’s unsent letter**. Their text lives in [progress.ts](../src/systems/progress.ts). The player can continue exploring after the ending.
+Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figures came from**, **Service bulletin 09**, **A familiar bootprint**, **Cassette B**, **The erased road**, **Mara’s unsent letter**, and **The torn name tag** (coast boathouse, after the tide lock). Their text lives in [progress.ts](../src/systems/progress.ts). The player can continue exploring after the ending.
 
 ## Art and audio direction
 
@@ -43,4 +45,4 @@ Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figure
 1. Time a blind desktop and mobile playthrough from a fresh checkpoint. Record time by chapter, wrong turns, puzzle stalls, and hazard recoveries, then tune for the 30-minute target. Add play value through decisions and interactions where chapters are short.
 2. Verify every puzzle and both endings in a browser. Test motion and input at narrow portrait widths, verify sound on actual hardware, and tune the figure's warning and pursuit cues.
 3. Improve environmental storytelling and interaction art in the annex, trench, and borehole. Add distinctive silhouettes, distinctive ambient sound, and optional clue chains that pay off across areas.
-4. Extend the mystery from the final choice through a coastal station chapter. Preserve the ending and evidence state as potential consequences. Keep clue prerequisites and checkpoint compatibility explicit.
+4. ~~Extend the mystery from the final choice through a coastal station chapter.~~ Chapter 06 is in place. Next: give the coast its own interior (radio hut cutaway), a distinct ambient sound, and tune the shore figure’s patrol in playtests.

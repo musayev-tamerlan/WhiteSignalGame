@@ -9,8 +9,8 @@ import { move, type GroundPoint } from './systems/movement';
 import { loadSave, saveGame, freshSave } from './systems/save';
 import { Levels } from './world/levels';
 import { walkAreas } from './world/layout';
-import { expedition, expeditionAreas, type Area } from './world/expedition-layout';
-import { available, chapter, currentObjective, endings, has, hotspots, routeTarget, type Hotspot, type Line } from './world/story';
+import { expedition, expeditionAreas, isFieldArea, type Area } from './world/expedition-layout';
+import { available, chapter, coastEpilogue, currentObjective, endings, has, hotspots, matchesEnding, routeTarget, type Hotspot, type Line } from './world/story';
 import { archive, type Ending } from './systems/progress';
 import { FieldConditions } from './systems/field';
 import { Encounter } from './systems/encounter';
@@ -98,8 +98,8 @@ let stepDistance = 0;
 let wasCracking = false;
 let lastFieldStatus = '';
 
-const snowy = (area: Area) => area === 'outside' || area === 'ridge' || area === 'crevasse';
-const exposed = (area: Area) => area === 'ridge' || area === 'crevasse';
+const snowy = (area: Area) => area === 'outside' || isFieldArea(area);
+const exposed = isFieldArea;
 const placeName = (area: Area) => area === 'outside' ? 'Station yard' : area === 'inside' ? 'Radio room' : expedition[area].title;
 
 function formatTime(seconds: number) {
@@ -213,7 +213,7 @@ function setPanel(next?: Panel) {
     addHeading(content, 'August 17, 1987');
     addParagraph(content, 'Kestrel stopped answering at 03:14. No distress call. Just twelve seconds of white noise.');
     for (const spot of [...hotspots].reverse()) {
-      if (!spot.proof || !has(state, spot.proof)) continue;
+      if (!spot.proof || !has(state, spot.proof) || !matchesEnding(state, spot)) continue;
       addHeading(content, spot.label);
       for (const [speaker, line] of spot.lines ?? []) addParagraph(content, `${speaker} — ${line}`);
     }
@@ -232,15 +232,20 @@ function setPanel(next?: Panel) {
       const name = document.createElement('span');
       name.textContent = placeName(area);
       const status = document.createElement('span');
-      status.textContent = area === state.level ? 'YOU ARE HERE' : areaLocks[area]?.every(flag => has(state, flag)) === false ? 'LOCKED' : 'OPEN';
+      const locked = area === 'coast' ? !state.ending : areaLocks[area]?.every(flag => has(state, flag)) === false;
+      status.textContent = area === state.level ? 'YOU ARE HERE' : locked ? 'LOCKED' : 'OPEN';
       row.append(name, status);
       list.append(row);
     }
     content.append(list);
   } else {
+    const epilogue = has(state, 'caller');
     addParagraph(content, state.ending === 'seal' ? 'Ending · The chamber is sealed' : 'Ending · The warning reaches the coast');
+    if (epilogue) addParagraph(content, 'Epilogue · The coast falls silent');
     addParagraph(content, `${formatTime(state.elapsed)} active time · ${state.evidence.length} of ${Object.keys(archive).length} optional discoveries archived`);
-    addParagraph(content, 'Return to the station to look for any evidence you missed.');
+    addParagraph(content, epilogue
+      ? 'Return to the station or the coast to look for any evidence you missed.'
+      : 'Chapter 06 is open. Something on the coast is still answering. Take the lift up and follow the erased road from the crevasse.');
   }
   el('resumeButton').focus();
 }
@@ -284,6 +289,10 @@ function complete(spot: Hotspot) {
   if (spot.record && !state.evidence.includes(spot.record)) state.evidence.push(spot.record);
   updateObjective();
   persist();
+  if (spot.proof === 'caller') {
+    beginDialogue(coastEpilogue(state), 'HALVARD COAST · LAST TRANSMISSION', () => setPanel('ending'));
+    return;
+  }
   if (spot.proof === 'heard') toast('The crew quarters are now accessible.');
   else if (spot.record) toast('Evidence archived in Field Notes.');
   else if (spot.proof) toast('Objective updated.');
@@ -293,7 +302,8 @@ function tell(spot: Hotspot) {
   const entry = spot.record && archive[spot.record];
   const lines: Line[] = entry ? [[entry.title.toUpperCase(), entry.text]] : spot.lines ?? [];
   if (!lines.length) { complete(spot); return; }
-  beginDialogue(lines, spot.id === 'terminal' ? 'INCOMING TRANSMISSION · 87.6 MHz' : 'KESTREL · FIELD RECORD', () => complete(spot));
+  const tag = spot.id === 'terminal' ? 'INCOMING TRANSMISSION · 87.6 MHz' : spot.area === 'coast' ? 'HALVARD COAST · FIELD RECORD' : 'KESTREL · FIELD RECORD';
+  beginDialogue(lines, tag, () => complete(spot));
 }
 
 function finishExpedition(ending: Ending) {
@@ -379,7 +389,7 @@ function updateScene(dt: number) {
 }
 
 function fixed(dt: number) {
-  if (!state.ending) state.elapsed += dt;
+  if (!has(state, 'caller')) state.elapsed += dt;
   clock += dt;
   if (input.pressed('KeyF') && !encounter.open) {
     state.flashlight = !state.flashlight;
