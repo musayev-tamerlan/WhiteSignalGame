@@ -834,6 +834,7 @@ if (import.meta.env.DEV) {
     close: () => setPanel(),
     field,
     body: () => player.body,
+    audio,
     persist,
     pad: () => input.pollGamepad(Boolean(panel || encounter.open)),
     grant: (...flags: typeof state.progress) => { state.progress.push(...flags.filter(flag => !has(state, flag))); updateObjective(); },
