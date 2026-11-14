@@ -392,7 +392,13 @@ const coastObjectives: [Milestone, string, string][] = [
   ['caller', 'Answer the call on the hut radio', 'caller'],
 ];
 
-export function currentObjective(save: Save) {
+export const objectiveTexts = [
+  ...objectives.map(([, text]) => text), ...coastObjectives.map(([, text]) => text),
+  'Calibrate the ridge relays ({0}/3)', 'Find the survey board and compare the relay bearings',
+  'Expedition complete · Explore for remaining evidence', 'Choose what to do with the signal',
+];
+
+export function currentObjective(save: Save): { text: string; target: string; values?: (string | number)[] } {
   if (save.ending) {
     for (const [flag, text, target] of coastObjectives) {
       if (!has(save, flag)) return { text, target: target === 'coast-log' ? `coast-log-${save.ending}` : target };
@@ -404,7 +410,7 @@ export function currentObjective(save: Save) {
     if (has(save, flag) || flag === 'flags' && has(save, 'echo')) continue;
     if (flag === 'triangulated') {
       const missing = (['west', 'center', 'east'] as const).filter(relay => !has(save, relay));
-      if (missing.length) return { text: `Calibrate the ridge relays (${3 - missing.length}/3)`, target: missing[0] };
+      if (missing.length) return { text: 'Calibrate the ridge relays ({0}/3)', values: [3 - missing.length], target: missing[0] };
       if (!has(save, 'survey')) return { text: 'Find the survey board and compare the relay bearings', target: 'survey' };
     }
     return { text, target };
