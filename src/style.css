@@ -162,3 +162,5 @@
 @media (pointer: coarse), (max-width: 700px) { #caption { bottom: calc(32% + 76px); font-size: 7px; } }
 
 .dialogue, .panel, .objective, #toast, #caption, .interact { zoom: var(--text-scale, 1); }
+
+.pictogram { width: 20px; height: 20px; margin-right: 8px; vertical-align: -5px; fill: none; stroke: #ceb69c; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }

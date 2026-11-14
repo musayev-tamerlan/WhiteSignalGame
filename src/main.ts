@@ -14,6 +14,7 @@ import { available, chapter, coastEpilogue, codaOptions, codaTitles, currentObje
 import { archive, type Ending } from './systems/progress';
 import { FieldConditions } from './systems/field';
 import { Encounter } from './systems/encounter';
+import { pictogram } from './world/pictograms';
 import { actions, keyName, loadSettings, saveSettings, type Action } from './systems/settings';
 import { Achievements, achievementList, type AchievementId } from './systems/achievements';
 import type { PadCommand } from './systems/input';
@@ -390,6 +391,7 @@ function setPanel(next?: Panel) {
     }
     for (const id of state.evidence) {
       addHeading(content, archive[id].title);
+      content.lastElementChild!.prepend(pictogram(id));
       addParagraph(content, archive[id].text);
     }
   } else if (next === 'map') {
@@ -872,6 +874,7 @@ function frame(now: number) {
 
 // Development-only hooks for browser checks. Vite strips this block from production builds.
 if (import.meta.env.DEV) {
+  void import('./debug').then(module => module.installDebugOverlay(scene, state));
   Object.assign(window, { whiteSignal: {
     state,
     go: (area: Area, x: number, z: number) => changeArea(area, { x, z }),
