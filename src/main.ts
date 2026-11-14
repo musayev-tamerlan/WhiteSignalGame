@@ -15,6 +15,7 @@ import { archive, type Ending } from './systems/progress';
 import { FieldConditions } from './systems/field';
 import { Encounter } from './systems/encounter';
 import { pictogram } from './world/pictograms';
+import { SceneEffects } from './world/effects';
 import { setLanguage, t, tf } from './i18n';
 import { actions, keyName, loadSettings, saveSettings, type Action } from './systems/settings';
 import { Achievements, achievementList, type AchievementId } from './systems/achievements';
@@ -33,75 +34,10 @@ el('viewport').append(renderer.domElement);
 renderer.domElement.setAttribute('aria-label','Snow-covered Kestrel Station. Use WASD or the arrow keys to move. Press E to interact.');
 const scene=new THREE.Scene();scene.background=new THREE.Color('#152b3b');scene.fog=new THREE.FogExp2('#243f50', .009);
 const levels=new Levels(scene), player=new Character(scene), camera=new FollowCamera(), input=new Input(), audio=new AudioSystem();
-const flashlight = new THREE.SpotLight('#e7e5bc', 19, 12, .33, .75, 1.4);
-scene.add(flashlight, flashlight.target);
-
-const cone = new THREE.Shape();
-cone.moveTo(0, 0);
-cone.lineTo(5.5, 1.15);
-cone.quadraticCurveTo(6.1, 0, 5.5, -1.15);
-cone.closePath();
-const beamGeometry = new THREE.ShapeGeometry(cone);
-const positions = beamGeometry.getAttribute('position');
-const falloff = new Float32Array(positions.count);
-for (let i = 0; i < positions.count; i++) falloff[i] = 1 - positions.getX(i) / 6;
-beamGeometry.setAttribute('strength', new THREE.BufferAttribute(falloff, 1));
-beamGeometry.rotateX(-Math.PI / 2);
-const beam = new THREE.Mesh(beamGeometry, new THREE.ShaderMaterial({
-  vertexShader: `
-    attribute float strength;
-    varying float lightStrength;
-    void main() {
-      lightStrength = strength;
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    }
-  `,
-  fragmentShader: `
-    varying float lightStrength;
-    void main() {
-      gl_FragColor = vec4(0.77, 0.76, 0.55, max(lightStrength, 0.0) * 0.16);
-    }
-  `,
-  transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-}));
-scene.add(beam);
-
-const waypoint = new THREE.Group();
-const halo = new THREE.Mesh(
-  new THREE.RingGeometry(0.63, 0.69, 28),
-  new THREE.MeshBasicMaterial({ color: '#f2b275', transparent: true, opacity: 0.8 }),
-);
-halo.rotation.x = -Math.PI / 2;
-const diamond = new THREE.Mesh(
-  new THREE.OctahedronGeometry(0.19),
-  new THREE.MeshBasicMaterial({ color: '#ffd1a1' }),
-);
-waypoint.add(halo, diamond);
-scene.add(waypoint);
-
+const effects = new SceneEffects(scene);
 const field = new FieldConditions();
 const encounter = new Encounter();
-const figure = new THREE.Group();
 const arrow = el('objectiveArrow');
-const figureMaterial = new THREE.MeshBasicMaterial({ color: '#152329', transparent: true, opacity: .72 });
-const coat = new THREE.Mesh(new THREE.CylinderGeometry(.24, .43, 1.34, 6), figureMaterial);
-coat.position.y = .82;
-const head = new THREE.Mesh(new THREE.SphereGeometry(.24, 8, 6), figureMaterial);
-head.position.y = 1.66;
-figure.add(coat, head);
-scene.add(figure);
-
-// Footprints left in the snow. The figure can follow fresh ones.
-const printGeometry = new THREE.PlaneGeometry(.2, .1);
-printGeometry.rotateX(-Math.PI / 2);
-const prints = new THREE.InstancedMesh(printGeometry, new THREE.MeshBasicMaterial({ color: '#3d5867', transparent: true, opacity: .55, depthWrite: false }), 80);
-prints.frustumCulled = false;
-scene.add(prints);
-const printMatrix = new THREE.Matrix4();
-const printRotation = new THREE.Quaternion();
-const printScale = new THREE.Vector3();
-const printPosition = new THREE.Vector3();
-const up = new THREE.Vector3(0, 1, 0);
 
 type Panel = 'menu' | 'pause' | 'journal' | 'map' | 'ending' | 'settings' | 'achievements';
 let panel: Panel | undefined;
@@ -609,21 +545,17 @@ function updateFieldHud() {
 }
 
 function updateScene(dt: number) {
-  const { x, y, z, facing } = player.body;
+  const { x, z } = player.body;
   player.update(dt);
   levels.update(dt * (1 + field.storm * 2.5), x, z);
   camera.update(player.body, dt, state.level);
-  flashlight.visible = state.flashlight;
-  flashlight.position.set(x + facing.x * .4, y + 1.05, z + facing.z * .4);
-  flashlight.target.position.set(x + facing.x * 7, .05, z + facing.z * 7);
-  beam.visible = state.flashlight;
-  beam.position.set(x + facing.x * .48, .095, z + facing.z * .48);
-  beam.rotation.y = Math.atan2(-facing.z, facing.x);
-
-  waypoint.visible = Boolean(navigation && !dialogue && !encounter.open);
+  effects.update(clock, player.body, {
+    flashlight: state.flashlight,
+    marker: navigation && !dialogue && !encounter.open ? navigation : undefined,
+    showPrints: exposed(state.level), prints: field.prints, figure: field.figure, alert: field.alert,
+  });
   arrow.hidden = !navigation;
   if (navigation) {
-    waypoint.position.set(navigation.x, .1, navigation.z);
     const dx = navigation.x - x;
     const dz = navigation.z - z;
     const range = Math.hypot(dx, dz);
@@ -633,26 +565,7 @@ function updateScene(dt: number) {
     const readout = range < 1.7 ? t('NEARBY') : tf('{0} M', Math.round(range));
     if (distance.textContent !== readout) distance.textContent = readout;
   } else el('objectiveDistance').textContent = '';
-  diamond.position.y = 1.08 + Math.sin(clock * 2.8) * .16;
-  diamond.rotation.y = clock * 1.5;
   levels.terminalLight.intensity = 5 + Math.sin(clock * 3) * .4;
-  prints.visible = exposed(state.level);
-  if (prints.visible) {
-    prints.count = field.prints.length;
-    field.prints.forEach((print, i) => {
-      const fade = Math.max(.15, 1 - print.age / 26);
-      printRotation.setFromAxisAngle(up, -print.angle);
-      printPosition.set(print.x + Math.sin(print.angle) * (i % 2 ? .09 : -.09), .03, print.z - Math.cos(print.angle) * (i % 2 ? .09 : -.09));
-      printScale.set(fade, 1, fade);
-      prints.setMatrixAt(i, printMatrix.compose(printPosition, printRotation, printScale));
-    });
-    prints.instanceMatrix.needsUpdate = true;
-  }
-  figure.visible = Boolean(field.figure);
-  if (field.figure) {
-    figure.position.set(field.figure.x, Math.sin(clock * 5) * .035, field.figure.z);
-    figureMaterial.opacity = .65 + field.alert * .28 + Math.sin(clock * 9) * .05;
-  }
 }
 
 function fixed(dt: number) {
