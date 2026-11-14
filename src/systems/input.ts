@@ -34,7 +34,9 @@ export class Input {
     window.addEventListener('blur', () => this.clear());
     document.querySelectorAll<HTMLElement>('[data-control]').forEach(button => {
       button.addEventListener('pointerdown', e => {
-        e.preventDefault(); button.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        // Capture keeps a held button pressed when the finger slides off it.
+        try { button.setPointerCapture(e.pointerId); } catch { /* Synthetic or already released pointers. */ }
         const action = button.dataset.control as Action;
         this.touch.set(e.pointerId, action); this.actionTaps.add(action); button.classList.add('held');
       });
@@ -77,7 +79,8 @@ export class Input {
       return;
     }
     const down = new Set(pad.buttons.flatMap((button, index) => button.pressed ? [index] : []));
-    const tapped = (index: number) => down.has(index) && !this.padPrevious.has(index);
+    const previous = this.padPrevious;
+    const tapped = (index: number) => down.has(index) && !previous.has(index);
     this.padPrevious = down;
     const axis = (value = 0) => Math.abs(value) > deadzone ? value : 0;
     const x = axis(pad.axes[0]) + Number(down.has(15)) - Number(down.has(14));

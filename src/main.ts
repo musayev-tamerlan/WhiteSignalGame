@@ -61,6 +61,8 @@ let settingsReturn: Panel = 'pause';
 let rebinding: Action | undefined;
 let wasTracking = false;
 let wasStorm = false;
+// Set once the caller is verified, so stepping back from the last choice doesn't repeat the puzzle.
+let callerVerified = false;
 const visited = new Set<Area>();
 
 const snowy = (area: Area) => area === 'outside' || isFieldArea(area);
@@ -414,6 +416,7 @@ function startExpedition(cycle: number) {
   dialogue = undefined;
   el('dialogue').hidden = true;
   lastChapter = '';
+  callerVerified = false;
   visited.clear();
   if (cycle) award('loop');
   changeArea(state.level, state);
@@ -456,7 +459,7 @@ function advanceDialogue() {
 }
 
 function complete(spot: Hotspot) {
-  if (spot.proof === 'caller' && !has(state, 'caller')) { chooseCoda(); return; }
+  if (spot.proof === 'caller' && !has(state, 'caller')) { callerVerified = true; chooseCoda(); return; }
   if (spot.proof && !has(state, spot.proof)) state.progress.push(spot.proof);
   if (spot.record && !state.evidence.includes(spot.record)) state.evidence.push(spot.record);
   if (spot.proof === 'heard') award('signal');
@@ -518,6 +521,8 @@ function interact() {
   } else if (spot.finale) {
     encounter.show(t('One transmission left'), t('The signal is contained for now. What should your last transmission do?'), [t('Seal the chamber'), t('Warn the coast')], choice =>
       finishExpedition(choice === 0 ? 'seal' : 'send'));
+  } else if (spot.id === 'caller' && callerVerified) {
+    chooseCoda();
   } else if (spot.puzzle) {
     encounter.puzzle(spot.puzzle, choice => audio.beep(spot.id === 'echo' ? [240, 420, 620][choice] : 380 + choice * 85), () => tell(spot));
   } else tell(spot);
@@ -531,7 +536,7 @@ function updatePrompt() {
   el('interact').querySelector('kbd')!.textContent = keyName(settings.keys.interact);
   const action = el<HTMLButtonElement>('touchAction');
   action.disabled = wall || (!nearby && !dialogue);
-  action.textContent = t(dialogue ? 'NEXT' : nearby?.destination ? 'OPEN' : 'USE');
+  action.textContent = t(dialogue ? 'NEXT' : nearby?.destination ? 'ENTER' : 'USE');
 }
 
 function updateFieldHud() {
@@ -738,6 +743,9 @@ window.addEventListener('keydown', event => {
   event.preventDefault();
   event.stopImmediatePropagation();
   if (event.code !== 'Escape') {
+    // A key used by another action swaps over, so no two actions share a key.
+    const clash = actions.find(name => name !== rebinding && settings.keys[name] === event.code);
+    if (clash) settings.keys[clash] = settings.keys[rebinding];
     settings.keys[rebinding] = event.code;
     saveSettings(settings);
     applySettings();
@@ -753,8 +761,11 @@ window.addEventListener('keydown', event => {
     back();
     return;
   }
-  if (panel === 'journal' && input.matches('journal', event.code)) setPanel();
-  else if (panel === 'map' && input.matches('map', event.code)) setPanel();
+  // The journal and map keys close their own panel and switch between the two.
+  if (panel === 'journal' || panel === 'map') {
+    if (input.matches('journal', event.code)) togglePanel('journal');
+    else if (input.matches('map', event.code)) togglePanel('map');
+  }
   if (!panel && encounter.open && /^Digit[1-9]$/.test(event.code)) encounter.press(Number(event.key) - 1);
 });
 
@@ -822,6 +833,9 @@ if (import.meta.env.DEV) {
     go: (area: Area, x: number, z: number) => changeArea(area, { x, z }),
     close: () => setPanel(),
     field,
+    body: () => player.body,
+    persist,
+    pad: () => input.pollGamepad(Boolean(panel || encounter.open)),
     grant: (...flags: typeof state.progress) => { state.progress.push(...flags.filter(flag => !has(state, flag))); updateObjective(); },
     // Advance the fixed simulation without rendering, for checks in a hidden tab.
     tick: (frames = 1) => { for (let i = 0; i < frames; i++) if (!panel) fixed(1 / 60); },
