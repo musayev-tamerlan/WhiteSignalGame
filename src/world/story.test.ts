@@ -6,7 +6,7 @@ import { archive, milestones } from '../systems/progress';
 import type { Area } from './expedition-layout';
 import { walkAreas } from './layout';
 import type { Save } from '../systems/save';
-import { available, coastEpilogue, currentObjective, endings, hotspots, routeTarget } from './story';
+import { available, coastEpilogue, codaOptions, currentObjective, endings, hotspots, routeTarget } from './story';
 
 function followObjectives(save: Save, visited: Set<string>) {
   for (let i = 0; i < 80; i++) {
@@ -39,7 +39,7 @@ test('a fresh expedition reaches both endings and the coast epilogue', () => {
     const branch: Save = { ...save, progress: [...save.progress], evidence: [], ending };
     const coast = new Set<string>();
     followObjectives(branch, coast);
-    assert.equal(branch.level, 'coast');
+    assert.equal(branch.level, 'hut');
     assert.ok(coast.has(`coast-log-${ending}`));
     assert.ok(!coast.has(`coast-log-${ending === 'seal' ? 'send' : 'seal'}`));
     assert.ok(coast.has('caller'));
@@ -134,4 +134,12 @@ test('a checkpoint that already has the lift badge skips the survey flags', () =
   assert.equal(currentObjective(save).target, 'override');
   save.progress = [...before, 'recorder'];
   assert.equal(currentObjective(save).target, 'flags');
+});
+
+test('the hidden coast outcome needs every discovery', () => {
+  const save: Save = { ...freshSave(), ending: 'seal', progress: ['reverse', 'coastLog', 'mast'], evidence: [] };
+  assert.deepEqual(codaOptions(save).map(option => option.id), ['silence', 'listen']);
+  save.evidence = Object.keys(archive) as Save['evidence'];
+  assert.deepEqual(codaOptions(save).map(option => option.id), ['silence', 'listen', 'witness']);
+  for (const coda of ['silence', 'listen', 'witness'] as const) assert.ok(coastEpilogue({ ...save, coda }).length >= 3, coda);
 });

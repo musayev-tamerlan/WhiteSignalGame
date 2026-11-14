@@ -28,6 +28,7 @@ export class Encounter {
   }
 
   puzzle(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void) {
+    if (puzzle.dial) { this.tune(puzzle, sound, solved); return; }
     this.attempt = [];
     const gauge = () => this.attempt.reduce((value, index) =>
       value + Number(puzzle.choices[index].replace('−', '-')), 3);
@@ -59,6 +60,38 @@ export class Encounter {
       });
       el('sequence').replaceChildren(...slots);
     });
+  }
+
+  /** A dial the player sweeps; static in the feedback line fades near the target. */
+  private tune(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void) {
+    const dial = puzzle.dial!;
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = String(dial.min);
+    slider.max = String(dial.max);
+    slider.step = String(dial.step);
+    slider.value = String(dial.min);
+    slider.className = 'dial';
+    slider.setAttribute('aria-label', `Frequency in ${dial.unit}`);
+    const readout = document.createElement('span');
+    const value = () => Number(slider.value);
+    const update = () => {
+      readout.textContent = `${value().toFixed(1)} ${dial.unit}`;
+      const off = Math.abs(value() - dial.target);
+      this.feedback(off < dial.step / 2 ? 'A voice, clear through the static.'
+        : off < .5 ? 'Faint words under the static.' : off < 1.5 ? 'Static, with a rhythm in it.' : 'Heavy static.');
+    };
+    this.show(puzzle.title, puzzle.hint, puzzle.choices, () => {
+      sound(0);
+      if (Math.abs(value() - dial.target) < dial.step / 2) {
+        this.close();
+        solved();
+      } else this.feedback(`Nothing but static on ${value().toFixed(1)} ${dial.unit}. Keep sweeping.`);
+    });
+    slider.addEventListener('input', update);
+    el('sequence').replaceChildren(slider, readout);
+    update();
+    slider.focus();
   }
 
   press(choice: number) {

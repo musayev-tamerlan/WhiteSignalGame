@@ -1,5 +1,5 @@
 import type { GroundPoint } from '../systems/movement';
-import type { ArchiveId, Ending, Milestone } from '../systems/progress';
+import { archive, type ArchiveId, type Coda, type Ending, type Milestone } from '../systems/progress';
 import type { Save } from '../systems/save';
 import { radioRoom, station } from './layout';
 import { expedition, type Area } from './expedition-layout';
@@ -10,7 +10,9 @@ export type Puzzle = {
   hint: string;
   choices: string[];
   answer: number[];
-  feedback: 'prefix' | 'count' | 'gauge';
+  feedback: 'prefix' | 'count' | 'gauge' | 'tune';
+  /** For 'tune' puzzles: a dial the player sweeps before locking the first choice. */
+  dial?: { min: number; max: number; step: number; target: number; unit: string };
   /** Shown instead of the default lock message when a step is wrong. */
   reject?: string;
 };
@@ -32,6 +34,8 @@ export interface Hotspot extends GroundPoint {
   afterEnding?: Ending | true;
   /** Optional evidence that must already be archived, for clue chains across areas. */
   requiresEvidence?: ArchiveId[];
+  /** Extra lines heard on New Game+ cycles. */
+  cycleLines?: Line[];
 }
 
 const backToStation = (point: GroundPoint) => ({ area: 'outside' as const, point });
@@ -52,7 +56,7 @@ export const endings: Record<Ending, Line[]> = {
   ],
 };
 
-const coastLog = (ending: Ending, lines: Line[]) => event('coast', `coast-log-${ending}`, 'Read the coast operator’s logbook', 18, -9.6, {
+const coastLog = (ending: Ending, lines: Line[]) => event('hut', `coast-log-${ending}`, 'Read the coast operator’s logbook', -1.5, -2.4, {
   afterEnding: ending, proof: 'coastLog',
   lines: [
     ...lines,
@@ -60,15 +64,44 @@ const coastLog = (ending: Ending, lines: Line[]) => event('coast', `coast-log-${
   ],
 });
 
-/** The coast epilogue reflects the Borehole Nine choice and whether Mara’s letter was found. */
+export function codaOptions(save: Save): { id: Coda; label: string }[] {
+  const options: { id: Coda; label: string }[] = [
+    { id: 'silence', label: 'Pull the fuse on the hut set' },
+    { id: 'listen', label: 'Keep the channel open and listen' },
+  ];
+  // The hidden outcome needs every discovery, including the roll call.
+  if (save.evidence.length === Object.keys(archive).length) options.push({ id: 'witness', label: 'Read it Ilse’s roll call' });
+  return options;
+}
+
+export const codaTitles: Record<Coda, string> = {
+  silence: 'Epilogue · The coast falls silent',
+  listen: 'Epilogue · The loop holds',
+  witness: 'Hidden outcome · The witnesses',
+};
+
+/** The coast epilogue reflects the Borehole Nine choice, the last call, and whether Mara’s letter was found. */
 export function coastEpilogue(save: Save): Line[] {
+  const letter: Line[] = save.evidence.includes('letter')
+    ? [['VOSS', 'Mara wrote the letter so I would know her by what she left out. The signal only learns what we say aloud.']]
+    : [];
+  if (save.coda === 'listen') return [
+    ['VOSS', 'Keep talking. Tell me what you are.'],
+    ['THE SIGNAL', 'I am what you sound like when no one answers. Every cycle, you stay a little longer to listen.'],
+    ['FIELD LOG', 'At 03:14 the hut clock resets to August 14. On the desk lies a fresh notebook. The first page is in your handwriting: “Arrived at Kestrel. Radio first.”'],
+  ];
+  if (save.coda === 'witness') return [
+    ['VOSS', 'Ilse kept a roll call. Six names, and three of them are mine. You never learned the other three, did you?'],
+    ['THE SIGNAL', 'No. They never spoke to me. They only spoke to each other.'],
+    ...letter,
+    ['THE SIGNAL', 'Is that what I was missing?'],
+    ['FIELD LOG', 'The carrier drops on its own. Outside, five sets of footprints come up the erased road toward the hut. One set walks out to meet them.'],
+  ];
   return [
     save.ending === 'seal'
       ? ['FIELD LOG', 'You pull the hut set’s fuse. Outside, one set of footprints leads from the boathouse to the open water and does not come back.']
       : ['FIELD LOG', 'You pull the hut set’s fuse. Tomorrow’s page in the coast log is already filled in, in your handwriting: “Warning received. We listened.”'],
-    ...save.evidence.includes('letter')
-      ? [['VOSS', 'Mara wrote the letter so I would know her by what she left out. The signal only learns what we say aloud.'] as Line]
-      : [],
+    ...letter,
     ['THE SIGNAL', 'Then I will learn silence next.'],
     ['FIELD LOG', 'August 18, 1987. 03:14 UTC. For the first time in four days, nothing on 87.6 MHz.'],
   ];
@@ -83,6 +116,11 @@ export const hotspots: Hotspot[] = [
   }),
   event('inside', 'terminal', 'Listen on 87.6 MHz', radioRoom.terminal.x, radioRoom.terminal.z, {
     proof: 'heard',
+    puzzle: {
+      title: 'Tune the receiver', hint: 'Sweep the dial until the static clears, then lock it. The station log lists the channel as 87.6 MHz.',
+      choices: ['Lock the frequency'], answer: [0], feedback: 'tune', dial: { min: 85, max: 90, step: .1, target: 87.6, unit: 'MHz' },
+    },
+    cycleLines: [['VOSS', 'I know what you are going to say. Say it anyway.']],
     lines: [
       ['UNKNOWN VOICE', '…Kestrel. Kestrel, do you read? Keep the lights on. Do not follow the figures in the snow.'],
       ['VOSS', 'This is Dr. Voss. I just arrived. Who is transmitting?'],
@@ -94,6 +132,7 @@ export const hotspots: Hotspot[] = [
   event('quarters', 'crew-exit', 'Return to station yard', -9, 6, { destination: backToStation({ x: -15, z: 4 }) }),
   event('quarters', 'roster', 'Inspect the duty roster', -4.4, -1.2, {
     proof: 'manifest',
+    cycleLines: [['DUTY ROSTER', 'Someone has added a tally beside my name since I was last here. Status: RETURNED THREE TIMES.']],
     lines: [
       ['DUTY ROSTER', 'Mara Sato, engineer. Last duty: BRAVO, then DELTA, then ALPHA.'],
       ['VOSS', 'Locker seals use the duty call signs in order. Someone underlined Mara’s route.'],
@@ -169,6 +208,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('ridge', 'receiver', 'Read the survey receiver', 30, -14, {
     requires: ['west', 'center', 'east', 'survey'], proof: 'triangulated',
+    cycleLines: [['UNKNOWN VOICE', 'You found it faster this time. So did I.']],
     puzzle: { title: 'Triangulate the return', hint: 'Match all three relay bearings to one candidate on the survey board. Both sets of readings are saved in Field Notes.', choices: ['Station Four', 'Trench Six', 'Borehole Nine'], answer: [2], feedback: 'prefix' },
     lines: [
       ['SURVEY RECEIVER', 'The source is below an old survey trench. The borehole lift badge was last seen with Mara’s field recorder.'],
@@ -224,6 +264,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('borehole', 'chamber', 'Unlock the listening chamber', 3, .35, {
     requires: ['depth', 'dampers'], proof: 'chamber',
+    cycleLines: [['THE SIGNAL', 'Welcome back. I kept your chair.']],
     puzzle: { title: 'Drill interlock', hint: 'Enter the three-digit depth of the first voice. The chart is in Field Notes. Digits may repeat.', choices: ['0', '3', '6', '9'], answer: [0, 3, 0], feedback: 'count' },
     lines: [
       ['THE SIGNAL', 'I’m not trying to hurt you. Every time you call, I learn a little more about being you.'],
@@ -276,7 +317,9 @@ export const hotspots: Hotspot[] = [
       ['ILSE · TAPED NOTE', 'If anyone calls the hut using a crew name, ask Mara’s question. She told me on the 14th: “Ask what I called the dog. I never had a dog.”'],
     ],
   }),
-  event('coast', 'roll', 'Read the Kestrel roll call', 14.5, -9.6, {
+  event('coast', 'hut-door', 'Enter the radio hut', 17.75, -10.2, { afterEnding: true, destination: destination('hut') }),
+  event('hut', 'hut-exit', 'Return to the shore', -6, 4.4, { destination: { area: 'coast', point: { x: 17.75, z: -8.8 } } }),
+  event('hut', 'roll', 'Read the Kestrel roll call', -4.6, -2.4, {
     afterEnding: true, requires: ['coastLog'], requiresEvidence: ['tally', 'sled', 'chairs'], record: 'roll',
   }),
   event('coast', 'suit', 'Search the survival suit', -16.6, -9.6, { afterEnding: true, requires: ['feedKey'], record: 'tag' }),
@@ -289,8 +332,9 @@ export const hotspots: Hotspot[] = [
       ['RADIO HUT', 'Incoming call on the hut set. Caller ID: KESTREL / SATO.'],
     ],
   }),
-  event('coast', 'caller', 'Answer the hut radio', 23, -9.6, {
+  event('hut', 'caller', 'Answer the hut radio', 3, -2.3, {
     afterEnding: true, requires: ['mast'], proof: 'caller',
+    cycleLines: [['VOSS', 'Last time I hung up on you. I remember that much.']],
     puzzle: { title: 'Verify the caller', hint: 'The caller says she is Mara Sato and asks you to reopen the mast. Ask the question she left with Ilse before you answer.', choices: ['Ask where she is', 'Ask what she called the dog', 'Ask what day it is'], answer: [1], feedback: 'prefix',
       reject: 'She laughs softly. “Does it matter, Elias? Just open the mast.” Ask the question Mara left with Ilse.' },
     lines: [

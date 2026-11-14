@@ -1,6 +1,6 @@
 import type { GroundPoint, WalkArea } from '../systems/movement';
 
-export const expeditionAreas = ['quarters', 'annex', 'ridge', 'crevasse', 'borehole', 'coast'] as const;
+export const expeditionAreas = ['quarters', 'annex', 'ridge', 'crevasse', 'borehole', 'coast', 'hut'] as const;
 export type ExpeditionArea = typeof expeditionAreas[number];
 export type Area = 'outside' | 'inside' | ExpeditionArea;
 export type FieldArea = 'ridge' | 'crevasse' | 'coast';
@@ -61,6 +61,13 @@ export const expedition = {
       fixture('hut', 20, -13.5, 9, 5, 'RADIO HUT'), fixture('hut', -12, -13.5, 7, 5, 'BOATHOUSE'),
       fixture('tower', 4, 10, 3, 3), fixture('rock', -20, 2, 5, 7), fixture('rock', 0, -4, 6, 5),
       fixture('rock', 13, 3, 5, 6), fixture('rock', 27, 10, 5, 6), fixture('crate', -5, -12, 2, 2),
+    ]),
+  },
+  hut: {
+    title: 'Radio hut', subtitle: 'INTERIOR · HALVARD COAST', snow: false, spawn: { x: -4.5, z: 3 },
+    walk: room(16, 11, [
+      fixture('desk', 3, -3.7, 4.2, 1.6), fixture('desk', -1.5, -3.8, 2.6, 1.4),
+      fixture('shelf', -6.2, -2.4, 1.4, 3), fixture('bed', 6, 1.6, 2, 3.4),
     ]),
   },
 } satisfies Record<ExpeditionArea, {

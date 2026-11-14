@@ -2,9 +2,10 @@
 // into the devtools console. It uses the dev-only window.whiteSignal hook and real
 // key events, advances the simulation manually (works in a hidden tab), and types
 // puzzle answers derived from the in-game hints, not from story.ts.
-// Usage: await whiteSignalCheck('seal')  or  await whiteSignalCheck('send')
+// Usage: await whiteSignalCheck('seal')  or  await whiteSignalCheck('send', '2')
+// The second argument picks the last-call option: 1 silence, 2 listen.
 // It overwrites the local checkpoint.
-window.whiteSignalCheck = async (ending = 'seal') => {
+window.whiteSignalCheck = async (ending = 'seal', coda = '1') => {
   const story = await import('/WhiteSignalGame/src/world/story.ts');
   const ws = window.whiteSignal, S = ws.state, $ = id => document.getElementById(id);
   const key = (code, k) => {
@@ -25,10 +26,17 @@ window.whiteSignalCheck = async (ending = 'seal') => {
     ws.go(S.level, target.x, target.z); ws.tick(2);
     const before = `${S.progress.length}${S.level}${S.ending ?? ''}`;
     key('KeyE', 'e');
+    const dial = document.querySelector('#sequence .dial');
+    if (dial) { dial.value = '87.6'; dial.dispatchEvent(new Event('input')); key('Digit1', '1'); }
     for (const digit of answers[target.id] ?? '') key(`Digit${digit}`, digit);
     if (target.finale) key(ending === 'seal' ? 'Digit1' : 'Digit2', ending === 'seal' ? '1' : '2');
     if (!$('puzzle').hidden) throw new Error(`${target.id}: ${$('puzzleFeedback').textContent}`);
     for (let n = 0; n < 25 && !$('dialogue').hidden; n++) key('KeyE', 'e');
+    // The last call offers silence, listening, or (with every discovery) the hidden outcome.
+    if (target.id === 'caller') {
+      key(`Digit${coda}`, coda);
+      for (let n = 0; n < 25 && !$('dialogue').hidden; n++) key('KeyE', 'e');
+    }
     if (!$('overlay').hidden) ws.close();
     if (before === `${S.progress.length}${S.level}${S.ending ?? ''}`) throw new Error(`${target.id} did nothing`);
     log.push(target.id);

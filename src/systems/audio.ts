@@ -1,5 +1,5 @@
 type Surface = 'snow' | 'floor';
-export type Ambience = 'yard' | 'radio' | 'quarters' | 'annex' | 'ridge' | 'crevasse' | 'borehole' | 'coast';
+export type Ambience = 'yard' | 'radio' | 'quarters' | 'annex' | 'ridge' | 'crevasse' | 'borehole' | 'coast' | 'hut';
 
 // Each place gets a low drone (two detuned oscillators), a wind level and a slow swell.
 const ambiences: Record<Ambience, { drone: number; droneLevel: number; wind: number; swell: number; swellRate: number }> = {
@@ -11,6 +11,7 @@ const ambiences: Record<Ambience, { drone: number; droneLevel: number; wind: num
   crevasse: { drone: 33, droneLevel: .04, wind: .38, swell: 0, swellRate: .1 },
   borehole: { drone: 38, droneLevel: .1, wind: .03, swell: .08, swellRate: .45 },
   coast: { drone: 0, droneLevel: 0, wind: .4, swell: .26, swellRate: .09 },
+  hut: { drone: 55, droneLevel: .04, wind: .12, swell: .07, swellRate: .09 },
 };
 
 export class AudioSystem {

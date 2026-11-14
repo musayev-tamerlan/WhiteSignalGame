@@ -160,7 +160,7 @@ function buildExpedition(group: THREE.Group, area: ExpeditionArea) {
   if (spot.area !== area) continue;
   if (spot.destination) {
    box(group, spot.x, .025, spot.z, 2.2, .05, 1.6, '#9e7e55');
-   const signs: Record<string, string> = { trench: 'TRENCH', lift: 'LIFT', 'coast-road': 'ROAD', 'coast-return': 'ROAD' };
+   const signs: Record<string, string> = { trench: 'TRENCH', lift: 'LIFT', 'coast-road': 'ROAD', 'coast-return': 'ROAD', 'hut-door': 'HUT' };
    floorSign(group, signs[spot.id] ?? 'EXIT', spot.x, spot.z, 1.9);
   } else if (spot.record || spot.id === 'recorder') {
    box(group, spot.x, .16, spot.z, .52, .32, .42, '#59717d');
@@ -197,6 +197,13 @@ function decorate(group: THREE.Group, area: ExpeditionArea) {
    box(group, x - .24, .72, z, .06, .6, .5, '#6f7d82');
    for (const dz of [-.2, .2]) box(group, x, .2, z + dz, .4, .4, .04, '#4d5a5f');
   }
+ } else if (area === 'hut') {
+  // Ilse's radio set, still warm, and her logbook.
+  box(group, 3, 1.55, -4.1, 2.6, .9, .7, '#1a2a30');
+  box(group, 3, 1.6, -3.73, 2.1, .5, .05, '#6fc2a4', true);
+  label(group, '87.6', 3, 1.6, -3.69, 1.2, '#173d33');
+  box(group, -1.5, 1.12, -3.8, .9, .06, .6, '#d6c6a2');
+  box(group, 6, .9, .2, .5, .3, .4, '#b5763e');
  } else if (area === 'coast') {
   // Mast lamps from the top: red, white, green.
   box(group, 4, 4.2, 10, .26, .2, .26, '#f1efe2', true);

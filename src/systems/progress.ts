@@ -23,3 +23,5 @@ export const archive = {
 } as const;
 export type ArchiveId = keyof typeof archive;
 export type Ending = 'seal' | 'send';
+/** How Chapter 06 ends: cut the set, keep listening, or (with every discovery) the hidden outcome. */
+export type Coda = 'silence' | 'listen' | 'witness';

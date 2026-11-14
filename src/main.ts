@@ -10,7 +10,7 @@ import { loadSave, saveGame, freshSave } from './systems/save';
 import { Levels } from './world/levels';
 import { walkAreas } from './world/layout';
 import { expedition, expeditionAreas, isFieldArea, type Area } from './world/expedition-layout';
-import { available, chapter, coastEpilogue, currentObjective, endings, has, hotspots, matchesEnding, routeTarget, type Hotspot, type Line } from './world/story';
+import { available, chapter, coastEpilogue, codaOptions, codaTitles, currentObjective, endings, has, hotspots, matchesEnding, routeTarget, type Hotspot, type Line } from './world/story';
 import { archive, type Ending } from './systems/progress';
 import { FieldConditions } from './systems/field';
 import { Encounter } from './systems/encounter';
@@ -161,6 +161,7 @@ const areaSounds: Partial<Record<Area, string>> = {
   crevasse: 'Ice creaks somewhere below',
   borehole: 'A slow pulse rises from the shaft',
   coast: 'Waves break against the sea ice',
+  hut: 'A radio set hums, tuned to an empty channel',
 };
 
 const barks: Partial<Record<Area, string>> = {
@@ -170,6 +171,7 @@ const barks: Partial<Record<Area, string>> = {
   crevasse: 'VOSS — The trench swallows sound. Not footsteps, though.',
   borehole: 'VOSS — It’s warm down here. It shouldn’t be.',
   coast: 'VOSS — The coast was supposed to be safe.',
+  hut: 'VOSS — Her coffee is still warm. So is the radio.',
 };
 
 function applySettings() {
@@ -401,7 +403,7 @@ function setPanel(next?: Panel) {
       const name = document.createElement('span');
       name.textContent = placeName(area);
       const status = document.createElement('span');
-      const locked = area === 'coast' ? !state.ending : areaLocks[area]?.every(flag => has(state, flag)) === false;
+      const locked = area === 'coast' || area === 'hut' ? !state.ending : areaLocks[area]?.every(flag => has(state, flag)) === false;
       status.textContent = area === state.level ? 'YOU ARE HERE' : locked ? 'LOCKED' : 'OPEN';
       row.append(name, status);
       list.append(row);
@@ -410,7 +412,7 @@ function setPanel(next?: Panel) {
   } else {
     const epilogue = has(state, 'caller');
     addParagraph(content, state.ending === 'seal' ? 'Ending · The chamber is sealed' : 'Ending · The warning reaches the coast');
-    if (epilogue) addParagraph(content, 'Epilogue · The coast falls silent');
+    if (epilogue) addParagraph(content, codaTitles[state.coda ?? 'silence']);
     addParagraph(content, `${formatTime(state.elapsed)} active time · ${state.evidence.length} of ${Object.keys(archive).length} optional discoveries archived`);
     addParagraph(content, epilogue
       ? 'Return to the station or the coast to look for any evidence you missed.'
@@ -487,28 +489,38 @@ function advanceDialogue() {
 }
 
 function complete(spot: Hotspot) {
+  if (spot.proof === 'caller' && !has(state, 'caller')) { chooseCoda(); return; }
   if (spot.proof && !has(state, spot.proof)) state.progress.push(spot.proof);
   if (spot.record && !state.evidence.includes(spot.record)) state.evidence.push(spot.record);
   if (spot.proof === 'heard') award('signal');
   if (state.evidence.length === Object.keys(archive).length) award('archivist');
-  if (spot.proof === 'caller') {
-    award('silence');
-    if (state.elapsed < 25 * 60) award('swift');
-  }
+
   updateObjective();
   persist();
-  if (spot.proof === 'caller') {
-    beginDialogue(coastEpilogue(state), 'HALVARD COAST · LAST TRANSMISSION', () => setPanel('ending'));
-    return;
-  }
   if (spot.proof === 'heard') toast('The crew quarters are now accessible.');
   else if (spot.record) toast('Evidence archived in Field Notes.');
   else if (spot.proof) toast('Objective updated.');
 }
 
+/** The last call in Chapter 06: a choice, then the epilogue it leads to. */
+function chooseCoda() {
+  const options = codaOptions(state);
+  encounter.show('One call left', 'The line is still open. Whatever you do next, the signal will remember it.', options.map(option => option.label), choice => {
+    encounter.close();
+    state.coda = options[choice].id;
+    state.progress.push('caller');
+    award(state.coda === 'witness' ? 'witness' : 'silence');
+    if (state.elapsed < 25 * 60) award('swift');
+    updateObjective();
+    persist();
+    beginDialogue(coastEpilogue(state), 'HALVARD COAST · LAST TRANSMISSION', () => setPanel('ending'));
+  });
+}
+
 function tell(spot: Hotspot) {
   const entry = spot.record && archive[spot.record];
-  const lines: Line[] = entry ? [[entry.title.toUpperCase(), entry.text]] : spot.lines ?? [];
+  const lines: Line[] = entry ? [[entry.title.toUpperCase(), entry.text]]
+    : [...spot.lines ?? [], ...state.cycle ? spot.cycleLines ?? [] : []];
   if (!lines.length) { complete(spot); return; }
   const tag = spot.id === 'terminal' ? 'INCOMING TRANSMISSION · 87.6 MHz' : spot.area === 'coast' ? 'HALVARD COAST · FIELD RECORD' : 'KESTREL · FIELD RECORD';
   beginDialogue(lines, tag, () => complete(spot));
