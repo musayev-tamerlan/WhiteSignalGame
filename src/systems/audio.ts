@@ -27,6 +27,10 @@ export class AudioSystem {
   private swellLfo?: OscillatorNode;
   private swellDepth?: GainNode;
   private gustLevel = 0;
+  private tuneNoise?: GainNode;
+  private tuneVoice?: GainNode;
+  private tuneSources: AudioScheduledSourceNode[] = [];
+  private tuneLevel = 0;
   volume = .8;
   muted = true;
 
@@ -120,6 +124,65 @@ export class AudioSystem {
     this.swell.gain.setTargetAtTime(sound.swell, t, .8);
     this.swellDepth.gain.setTargetAtTime(sound.swell * .9, t, .8);
     this.swellLfo.frequency.setTargetAtTime(sound.swellRate, t, .3);
+  }
+
+  /**
+   * Radio tuning feedback: hiss that fades and a wavering voice tone that grows
+   * as the dial nears the channel (closeness 0 to 1). Pass null to stop.
+   */
+  tuning(closeness: number | null) {
+    const ctx = this.context;
+    if (!ctx || !this.master) return;
+    const t = ctx.currentTime;
+    if (closeness === null) {
+      this.tuneNoise?.gain.setTargetAtTime(0, t, .05);
+      this.tuneVoice?.gain.setTargetAtTime(0, t, .05);
+      const sources = this.tuneSources;
+      setTimeout(() => sources.forEach(source => { try { source.stop(); } catch { /* Already stopped. */ } }), 400);
+      this.tuneSources = [];
+      this.tuneNoise = this.tuneVoice = undefined;
+      this.tuneLevel = 0;
+      return;
+    }
+    if (!this.tuneNoise || !this.tuneVoice) {
+      const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      const band = ctx.createBiquadFilter();
+      band.type = 'bandpass';
+      band.frequency.value = 1900;
+      band.Q.value = .6;
+      this.tuneNoise = ctx.createGain();
+      this.tuneNoise.gain.value = 0;
+      noise.connect(band).connect(this.tuneNoise).connect(this.master);
+
+      // A buzzy "voice" whose pitch wavers like speech under a tremolo.
+      const voice = ctx.createOscillator();
+      voice.type = 'sawtooth';
+      voice.frequency.value = 170;
+      const formant = ctx.createBiquadFilter();
+      formant.type = 'bandpass';
+      formant.frequency.value = 800;
+      formant.Q.value = 1.4;
+      const wobble = ctx.createOscillator();
+      wobble.frequency.value = 3.2;
+      const wobbleDepth = ctx.createGain();
+      wobbleDepth.gain.value = 22;
+      wobble.connect(wobbleDepth).connect(voice.frequency);
+      this.tuneVoice = ctx.createGain();
+      this.tuneVoice.gain.value = 0;
+      voice.connect(formant).connect(this.tuneVoice).connect(this.master);
+      for (const source of [noise, voice, wobble]) source.start();
+      this.tuneSources = [noise, voice, wobble];
+    }
+    this.tuneNoise.gain.setTargetAtTime(.03 + .3 * (1 - closeness), t, .04);
+    this.tuneVoice.gain.setTargetAtTime(.35 * closeness * closeness, t, .04);
+    // A short chime the moment the channel comes in.
+    if (closeness >= 1 && this.tuneLevel < 1) this.tone(988, .25, .22);
+    this.tuneLevel = closeness;
   }
 
   /** A low double thump used when a figure has noticed the player. */

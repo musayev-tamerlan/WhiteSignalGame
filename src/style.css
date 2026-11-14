@@ -181,3 +181,25 @@
   #toast { bottom: 150px; }
   #caption { bottom: 168px; }
 }
+
+/* The tuning dial spans the whole puzzle so small steps are easy to hit. */
+.sequence .dial { flex: 1 1 100%; width: 100%; height: 34px; }
+
+.sequence .signal-meter { display: flex; align-items: flex-end; gap: 4px; height: 38px; padding: 0 10px 4px; border: 1px solid #c39d7955; }
+.sequence .signal-meter i { width: 8px; background: #2a3e45; transition: background .12s; }
+.sequence .signal-meter i:nth-child(1) { height: 8px; }
+.sequence .signal-meter i:nth-child(2) { height: 10px; }
+.sequence .signal-meter i:nth-child(3) { height: 12px; }
+.sequence .signal-meter i:nth-child(4) { height: 14px; }
+.sequence .signal-meter i:nth-child(5) { height: 16px; }
+.sequence .signal-meter i:nth-child(6) { height: 18px; }
+.sequence .signal-meter i:nth-child(7) { height: 20px; }
+.sequence .signal-meter i:nth-child(8) { height: 22px; }
+.sequence .signal-meter i:nth-child(9) { height: 24px; }
+.sequence .signal-meter i:nth-child(10) { height: 26px; }
+.sequence .signal-meter i:nth-child(11) { height: 28px; }
+.sequence .signal-meter i:nth-child(12) { height: 30px; }
+.sequence .signal-meter i.on { background: #d9a876; }
+.sequence .signal-meter.locked { border-color: #79e0b0; }
+.sequence .signal-meter.locked i.on { background: #79e0b0; box-shadow: 0 0 6px #79e0b066; }
+.sequence .dial.locked { accent-color: #79e0b0; }

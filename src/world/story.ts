@@ -12,7 +12,7 @@ export type Puzzle = {
   answer: number[];
   feedback: 'prefix' | 'count' | 'gauge' | 'tune';
   /** For 'tune' puzzles: a dial the player sweeps before locking the first choice. */
-  dial?: { min: number; max: number; step: number; target: number; unit: string };
+  dial?: { min: number; max: number; step: number; target: number; unit: string; tolerance: number };
   /** Shown instead of the default lock message when a step is wrong. */
   reject?: string;
 };
@@ -118,7 +118,7 @@ export const hotspots: Hotspot[] = [
     proof: 'heard',
     puzzle: {
       title: 'Tune the receiver', hint: 'Sweep the dial until the static clears, then lock it. The station log lists the channel as 87.6 MHz.',
-      choices: ['Lock the frequency'], answer: [0], feedback: 'tune', dial: { min: 85, max: 90, step: .1, target: 87.6, unit: 'MHz' },
+      choices: ['Lock the frequency'], answer: [0], feedback: 'tune', dial: { min: 86, max: 89, step: .1, target: 87.6, unit: 'MHz', tolerance: .3 },
     },
     cycleLines: [['VOSS', 'I know what you are going to say. Say it anyway.']],
     lines: [

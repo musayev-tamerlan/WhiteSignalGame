@@ -524,7 +524,8 @@ function interact() {
   } else if (spot.id === 'caller' && callerVerified) {
     chooseCoda();
   } else if (spot.puzzle) {
-    encounter.puzzle(spot.puzzle, choice => audio.beep(spot.id === 'echo' ? [240, 420, 620][choice] : 380 + choice * 85), () => tell(spot));
+    encounter.puzzle(spot.puzzle, choice => audio.beep(spot.id === 'echo' ? [240, 420, 620][choice] : 380 + choice * 85), () => tell(spot),
+      closeness => audio.tuning(closeness));
   } else tell(spot);
 }
 

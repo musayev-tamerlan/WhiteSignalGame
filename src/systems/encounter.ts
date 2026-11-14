@@ -28,8 +28,11 @@ export class Encounter {
     this.keys[0]?.focus();
   }
 
-  puzzle(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void) {
-    if (puzzle.dial) { this.tune(puzzle, sound, solved); return; }
+  private stopTuning?: () => void;
+
+  /** `tuning` receives how close a dial is to its target, 0 to 1, and null when it closes. */
+  puzzle(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void, tuning?: (closeness: number | null) => void) {
+    if (puzzle.dial) { this.tune(puzzle, sound, solved, tuning); return; }
     this.attempt = [];
     const gauge = () => this.attempt.reduce((value, index) =>
       value + Number(puzzle.choices[index].replace('−', '-')), 3);
@@ -64,7 +67,7 @@ export class Encounter {
   }
 
   /** A dial the player sweeps; static in the feedback line fades near the target. */
-  private tune(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void) {
+  private tune(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void, tuning?: (closeness: number | null) => void) {
     const dial = puzzle.dial!;
     const slider = document.createElement('input');
     slider.type = 'range';
@@ -76,21 +79,37 @@ export class Encounter {
     slider.setAttribute('aria-label', tf('Frequency in {0}', t(dial.unit)));
     const readout = document.createElement('span');
     const value = () => Number(slider.value);
+    // Anything within the tolerance counts as tuned, so the dial is easy to catch on touch screens.
+    const tuned = () => Math.abs(value() - dial.target) <= dial.tolerance + 1e-6;
+    // Twelve signal bars fill as the dial nears the channel and turn green on it.
+    const meter = document.createElement('span');
+    meter.className = 'signal-meter';
+    meter.setAttribute('aria-hidden', 'true');
+    const bars = Array.from({ length: 12 }, () => meter.appendChild(document.createElement('i')));
     const update = () => {
       readout.textContent = `${value().toFixed(1)} ${t(dial.unit)}`;
       const off = Math.abs(value() - dial.target);
-      this.feedback(t(off < dial.step / 2 ? 'A voice, clear through the static.'
-        : off < .5 ? 'Faint words under the static.' : off < 1.5 ? 'Static, with a rhythm in it.' : 'Heavy static.'));
+      const closeness = tuned() ? 1 : Math.max(0, 1 - (off - dial.tolerance) / 1.6) * .85;
+      bars.forEach((bar, i) => bar.classList.toggle('on', i < Math.round(closeness * bars.length)));
+      meter.classList.toggle('locked', tuned());
+      slider.classList.toggle('locked', tuned());
+      tuning?.(closeness);
+      const direction = tuned() ? '' : ` ${t(value() < dial.target ? 'Turn the dial higher.' : 'Turn the dial lower.')}`;
+      this.feedback(t(tuned() ? 'A voice, clear through the static. Lock it now.'
+        : off < .8 ? 'Faint words under the static.' : off < 1.6 ? 'Static, with a rhythm in it.' : 'Heavy static.') + direction);
     };
     this.show(puzzle.title, puzzle.hint, puzzle.choices, () => {
       sound(0);
-      if (Math.abs(value() - dial.target) < dial.step / 2) {
+      if (tuned()) {
+        slider.value = String(dial.target);
+        update();
         this.close();
         solved();
       } else this.feedback(tf('Nothing but static on {0} {1}. Keep sweeping.', value().toFixed(1), t(dial.unit)));
     });
     slider.addEventListener('input', update);
-    el('sequence').replaceChildren(slider, readout);
+    el('sequence').replaceChildren(slider, readout, meter);
+    this.stopTuning = () => tuning?.(null);
     update();
     slider.focus();
   }
@@ -102,6 +121,8 @@ export class Encounter {
   private feedback(message: string) { el('puzzleFeedback').textContent = message; }
 
   close() {
+    this.stopTuning?.();
+    this.stopTuning = undefined;
     this.select = undefined;
     el('puzzle').hidden = true;
     (document.activeElement as HTMLElement | null)?.blur();
