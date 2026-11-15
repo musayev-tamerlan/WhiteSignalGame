@@ -5,6 +5,7 @@ import { achievementList } from '../src/systems/achievements';
 import { expedition } from '../src/world/expedition-layout';
 import { freshSave } from '../src/systems/save';
 import { chapter, coastEpilogue, codaOptions, codaTitles, endings, hotspots, objectiveTexts } from '../src/world/story';
+import { sceneEvents } from '../src/world/events';
 
 export function storyStrings() {
   const out = new Set<string>();
@@ -31,6 +32,12 @@ export function storyStrings() {
   objectiveTexts.forEach(add);
   for (const area of Object.values(expedition)) { add(area.title); add(area.title.toUpperCase()); add(area.subtitle); }
   for (const entry of Object.values(achievementList)) { add(entry.title); add(entry.text); }
+  for (const event of sceneEvents) {
+    for (const [, cue] of event.cues) {
+      if ('text' in cue) add(cue.text);
+      if ('speaker' in cue) add(cue.speaker);
+    }
+  }
   const save = freshSave();
   for (const flags of [[], ['heard'], ['dispatch'], ['triangulated'], ['override']] as const) {
     add(chapter({ ...save, progress: [...flags] }).title);

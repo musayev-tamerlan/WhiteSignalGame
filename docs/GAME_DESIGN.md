@@ -40,6 +40,20 @@ Optional discoveries are **The unmade bed**, **Six shadows**, **Where the figure
 - All in-game art ships as source: the [scene geometry](../src/world/levels.ts), [pixel character](../src/systems/character.ts), and [camera](../src/systems/camera.ts) generate it at runtime. Original character and isometric reference images informed the style. No reference image is required to build the game. Current screenshots are indexed in the [asset guide](ASSETS.md).
 - [Audio](../src/systems/audio.ts) uses Web Audio synthesis, including a per-area ambience (drone, wind level, and swell: generator hum in the annex, a slow pulse in Borehole Nine, surf on the coast), a heartbeat that starts when a figure hears the player and quickens with exposure, granular snow crunch, harder floor steps, landing sounds, and radio tones. Audio begins with a user gesture. Muting is stored independently of the campaign checkpoint.
 
+## Gameplay direction (vertical slice)
+
+The owner's feedback was that the game felt slow. The slice reworks the core loop around the signal itself and is applied first to Chapters 01–02:
+
+- **Radio direction finding replaces the amber marker** (Settings → Navigation can restore it). The HUD signal meter and finder blips grow when Voss is close to the objective and facing it, so players sweep to find a bearing.
+- **Scene events** ([events.ts](../src/world/events.ts)) play short, wordless moments once per session: the cold open (your own bootprints lead into the dark and a figure stands where they stop), the receiver waking, sightings on the ridge and in the trench, the caller hailing you on the shore.
+- **Chapter 02 blackout**: after Mara's locker the station loses power until the annex is restarted. A figure walks the yard ([stalker.ts](../src/systems/stalker.ts)); the three door lamps stay on and are safe. Being caught returns you to the last lit door.
+- **Voss's past self**: in the crew quarters a pale double walks from the spare bunk to Mara's locker and into the wall. It shows only in the flashlight beam and replaces the old "trace the scuffs" step.
+- **Mobile first**: a floating joystick replaces the arrow pad on touch screens.
+- **Feel**: breath fog, flashlight stutter near danger, camera shake, vibration on Android, and a low stinger for scares.
+- Long Chapter 01–02 lines were cut.
+
+Next steps for the slice: playtest it on phones with 3–5 people, then carry the same treatment (one idea per level, events, hands-on puzzles) into Chapters 03–06.
+
 ## Next development priorities
 
 Status as of November 2026: `npm run pacing` estimates the critical path at about 21 minutes (Chapters 01–05 about 15, Chapter 06 about 5) before optional evidence, hazards and retries. Every puzzle and both endings pass a scripted browser run ([browser-check.js](../scripts/browser-check.js)), and layouts were checked at 375×812 and 320×640.

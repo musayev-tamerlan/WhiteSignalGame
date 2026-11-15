@@ -125,7 +125,7 @@ export const hotspots: Hotspot[] = [
       ['UNKNOWN VOICE', '…Kestrel. Kestrel, do you read? Keep the lights on. Do not follow the figures in the snow.'],
       ['VOSS', 'This is Dr. Voss. I just arrived. Who is transmitting?'],
       ['UNKNOWN VOICE', 'You arrived three days ago, Doctor. Check your bunk. There are things you left there for yourself.'],
-      ['RADIO LOG', '03:14 UTC. Same voice, same warning. The first copy is dated August 14. Check the crew quarters west of the station.'],
+      ['RADIO LOG', '03:14 UTC. Same voice, same warning, first logged August 14. Next: the crew quarters, west of the station.'],
     ],
   }),
   event('outside', 'crew-door', 'Enter crew quarters', -16, 4, { requires: ['heard'], destination: destination('quarters') }),
@@ -137,7 +137,6 @@ export const hotspots: Hotspot[] = [
       ['DUTY ROSTER', 'Mara Sato, engineer. Last duty: BRAVO, then DELTA, then ALPHA.'],
       ['VOSS', 'Locker seals use the duty call signs in order. Someone underlined Mara’s route.'],
       ['DUTY ROSTER', 'My own name is on the next line, in handwriting I recognize. Status: RETURNED TWICE.'],
-      ['VOSS', 'There are scuffs on the floor near the back wall. My flashlight might show which locker was used.'],
     ],
   }),
   event('quarters', 'footprints', 'Examine the scuffed floor', 2.8, -3.55, {
@@ -152,7 +151,7 @@ export const hotspots: Hotspot[] = [
     puzzle: { title: 'Locker call signs', hint: 'Repeat Mara’s three duty calls in order. The roster entry is saved in Field Notes.', choices: ['ALPHA', 'BRAVO', 'CHARLIE', 'DELTA'], answer: [1, 3, 0], feedback: 'prefix' },
     lines: [
       ['MARA · RECORDED', 'I took the annex fuse out after Voss tried to reroute the signal. He was speaking to someone who sounded exactly like him.'],
-      ['MARA · RECORDED', 'The spare is in a green crate beside the yard cache. If you restore power, use the service card inside the annex. Take a minute to read it.'],
+      ['MARA · RECORDED', 'The spare fuse is in the green crate in the yard. In the annex, read the service card before you touch anything.'],
     ],
   }),
   event('quarters', 'berth', 'Inspect the spare bunk', -.8, -1.1, { record: 'berth' }),
@@ -175,8 +174,8 @@ export const hotspots: Hotspot[] = [
   event('annex', 'dispatch', 'Read the network dispatch', 7.5, -1.2, {
     requires: ['power'], proof: 'dispatch',
     lines: [
-      ['DISPATCH', 'All three relays must be calibrated on site. An intact signal has three beats: a short burst, another short burst, and a long pulse. Set the frequency on each relay and use that pulse pattern.'],
-      ['DISPATCH', 'Come back under the heated beacon if you lose feeling in your hands. The figures turn toward running steps and bright lights.'],
+      ['DISPATCH', 'Calibrate all three relays on site. An intact signal beats short, short, long. Set each relay’s frequency, then that pulse.'],
+      ['DISPATCH', 'If you lose feeling in your hands, get under a heated beacon. The figures turn toward running and light.'],
       ['VOSS', 'The ridge trail starts at the east side of the yard. Once the array is aligned, use the survey receiver at the far end.'],
     ],
   }),
@@ -366,7 +365,7 @@ export function available(save: Save, hotspot: Hotspot) {
 const objectives: [Milestone, string, string][] = [
   ['heard', 'Listen to the station radio', 'terminal'],
   ['manifest', 'Find Mara’s duty calls in the crew quarters', 'roster'],
-  ['footprints', 'Use your flashlight to trace the scuffs in the crew quarters', 'footprints'],
+  ['footprints', 'Light up the figure in the crew quarters and follow where it goes', 'footprints'],
   ['locker', 'Use the duty calls to open Mara’s locker', 'locker'],
   ['fuse', 'Recover the spare fuse from the yard cache', 'fuse-cache'],
   ['serviceCard', 'Read the annex startup procedure', 'service-card'],

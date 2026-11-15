@@ -203,3 +203,27 @@
 .sequence .signal-meter.locked { border-color: #79e0b0; }
 .sequence .signal-meter.locked i.on { background: #79e0b0; box-shadow: 0 0 6px #79e0b066; }
 .sequence .dial.locked { accent-color: #79e0b0; }
+/* Floating joystick on touch screens replaces the four arrow buttons. */
+#stickZone { display: none; }
+@media (pointer: coarse) {
+  .touch-controls .touch-move { display: none; }
+  .touch-controls { justify-content: flex-end; }
+  .hud { pointer-events: none; }
+  #stickZone { display: block; position: absolute; left: 0; bottom: 0; width: 55%; height: 62%; z-index: 4; touch-action: none; }
+  #stickBase { position: absolute; left: -52px; top: -52px; width: 104px; height: 104px; border-radius: 50%; border: 1px solid #9cb9c355; background: #142a3766; opacity: 0; transition: opacity .15s; pointer-events: none; }
+  #stickBase.active { opacity: 1; }
+  #stickKnob { position: absolute; left: 30px; top: 30px; width: 44px; height: 44px; border-radius: 50%; background: #d9a876cc; box-shadow: 0 0 12px #0008; }
+  #stickHint { position: absolute; left: 28px; bottom: max(28px, env(safe-area-inset-bottom)); color: #9cb9c399; font-size: 9px; letter-spacing: .12em; pointer-events: none; }
+  #stickZone:has(#stickBase.active) #stickHint { opacity: 0; }
+}
+.signal-hud { display: inline-flex; flex-direction: column; gap: 3px; margin-left: 4px; }
+.signal-hud[hidden] { display: none; }
+.signal-hud small { font-size: 6px; letter-spacing: .2em; color: #9fb6bb; }
+.signal-hud span { display: flex; align-items: flex-end; gap: 2px; height: 16px; }
+.signal-hud i { width: 4px; background: #2a3e45; }
+.signal-hud i:nth-child(1) { height: 4px; } .signal-hud i:nth-child(2) { height: 5.5px; }
+.signal-hud i:nth-child(3) { height: 7px; } .signal-hud i:nth-child(4) { height: 8.5px; }
+.signal-hud i:nth-child(5) { height: 10px; } .signal-hud i:nth-child(6) { height: 11.5px; }
+.signal-hud i:nth-child(7) { height: 13px; } .signal-hud i:nth-child(8) { height: 14.5px; }
+.signal-hud i.on { background: #d9a876; }
+.signal-hud.locked i.on { background: #79e0b0; }
