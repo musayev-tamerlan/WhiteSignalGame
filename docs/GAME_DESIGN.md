@@ -52,7 +52,17 @@ The owner's feedback was that the game felt slow. The slice reworks the core loo
 - **Feel**: breath fog, flashlight stutter near danger, camera shake, vibration on Android, and a low stinger for scares.
 - Long Chapter 01–02 lines were cut.
 
-Next steps for the slice: playtest it on phones with 3–5 people, then carry the same treatment (one idea per level, events, hands-on puzzles) into Chapters 03–06.
+The same treatment now runs through the rest of the campaign:
+
+- **Hands-on puzzles**: Mara's locker, the drill interlock and the tide lock use turnable dials. Every puzzle quotes the note it needs, sequence steps report what they changed (heater on, pump running, lamp out), and the dampers have a live needle.
+- **Chapter 03**: a sighting after the third relay, and a forced whiteout right after triangulation — the way back to the trench is walked in a storm.
+- **Chapter 04**: once the badge leaves the emergency receiver, the trench collapses on a countdown (42 s; 75 story, 32 hard). Running out drops you back at the heater with progress intact.
+- **Chapter 05**: *Find your own voice* — three recordings answer as Voss; yours repeats your first words at the radio. Older saves past the transcript skip it.
+- **Chapter 06**: the tide is live. Sea ice holds at low water and breaks at high water (26 s low, 18 s high), with flood water drawn over the ice.
+- **Figures mirror you**: a nearby figure freezes when you stand still. **New Game+ echoes**: each cycle records your route per area, and the next cycle replays it as a pale Voss.
+- Narrative lines in Chapters 03–06 were trimmed; the title menu suggests headphones.
+
+Next: playtest on phones with 3–5 people and tune countdowns, tide timing and figure hearing from what they do.
 
 ## Next development priorities
 

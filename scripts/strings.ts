@@ -16,6 +16,7 @@ export function storyStrings() {
     if (spot.puzzle) {
       add(spot.puzzle.title); add(spot.puzzle.hint); add(spot.puzzle.reject);
       spot.puzzle.choices.forEach(add);
+      spot.puzzle.steps?.forEach(add);
     }
   }
   for (const entry of Object.values(archive)) { add(entry.title); add(entry.title.toUpperCase()); add(entry.text); }

@@ -14,6 +14,7 @@ export class YardStalker {
   figure: GroundPoint = { ...yardPatrol[0] };
   alert = 0;
   safe = false;
+  mimicking = false;
   difficulty: Difficulty = 'normal';
   private target = 1;
   private trail?: GroundPoint;
@@ -48,7 +49,8 @@ export class YardStalker {
     const goal = chasing ? this.trail! : yardPatrol[this.target];
     const gap = distance(goal, this.figure);
     if (!chasing && gap < .4) this.target = (this.target + 1) % yardPatrol.length;
-    if (gap > .05) {
+    this.mimicking = !chasing && speed < .2 && range < 14;
+    if (gap > .05 && !this.mimicking) {
       // It will not step into lamplight.
       const step = Math.min(gap, dt * (chasing ? 3.4 : 1.6) * hard) / gap;
       const next = { x: this.figure.x + (goal.x - this.figure.x) * step, z: this.figure.z + (goal.z - this.figure.z) * step };

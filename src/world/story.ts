@@ -15,6 +15,10 @@ export type Puzzle = {
   dial?: { min: number; max: number; step: number; target: number; unit: string; tolerance: number };
   /** Shown instead of the default lock message when a step is wrong. */
   reject?: string;
+  /** Turnable dials: each dial cycles through these values; `answer` holds one index per dial. */
+  dials?: { values: string[]; count: number };
+  /** Feedback after each correct step of a sequence, so every press changes something. */
+  steps?: string[];
   /** A line from an earlier note, quoted inside the puzzle so players needn't open Field Notes. */
   note?: { spot: string; line: number };
 };
@@ -150,7 +154,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('quarters', 'locker', 'Open Mara’s locker', 7.5, -3.2, {
     requires: ['manifest', 'footprints'], proof: 'locker',
-    puzzle: { note: { spot: 'roster', line: 0 }, title: 'Locker call signs', hint: 'Repeat Mara’s three duty calls in order. The roster entry is saved in Field Notes.', choices: ['ALPHA', 'BRAVO', 'CHARLIE', 'DELTA'], answer: [1, 3, 0], feedback: 'prefix' },
+    puzzle: { note: { spot: 'roster', line: 0 }, title: 'Locker call signs', hint: 'Turn the three dials to Mara’s duty calls, in order, then try the lock.', choices: ['Try the lock'], dials: { values: ['ALPHA', 'BRAVO', 'CHARLIE', 'DELTA'], count: 3 }, answer: [1, 3, 0], feedback: 'count' },
     lines: [
       ['MARA · RECORDED', 'I took the annex fuse out after Voss tried to reroute the signal. He was speaking to someone who sounded exactly like him.'],
       ['MARA · RECORDED', 'The spare fuse is in the green crate in the yard. In the annex, read the service card before you touch anything.'],
@@ -170,7 +174,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('annex', 'power', 'Fit fuse and route power', 0, -1.2, {
     requires: ['fuse', 'serviceCard'], proof: 'power',
-    puzzle: { note: { spot: 'service-card', line: 0 }, title: 'Bring the annex online', hint: 'A service card by the west generator lists the startup constraints. Breakers trip on a wrong step.', choices: ['Heater', 'Lights', 'Antenna', 'Pump'], answer: [0, 3, 2, 1], feedback: 'prefix' },
+    puzzle: { note: { spot: 'service-card', line: 0 }, steps: ['Heater on. Warm air pushes through the vents.', 'Pump running. Water knocks in the pipes.', 'Antenna live. A radio on the wall wakes up hissing.'], title: 'Bring the annex online', hint: 'A service card by the west generator lists the startup constraints. Breakers trip on a wrong step.', choices: ['Heater', 'Lights', 'Antenna', 'Pump'], answer: [0, 3, 2, 1], feedback: 'prefix' },
     lines: [['ANNEX SYSTEM', 'Local heat restored. Network active.'], ['UNKNOWN VOICE', 'Mara, listen to me. If he comes back from the borehole, make him wait in the light.'], ['VOSS', 'That’s my voice. And I haven’t been to the borehole.']],
   }),
   event('annex', 'dispatch', 'Read the network dispatch', 7.5, -1.2, {
@@ -187,17 +191,17 @@ export const hotspots: Hotspot[] = [
   event('ridge', 'ridge-return', 'Return to station yard', -29, 13, { destination: backToStation({ x: 27, z: -9 }) }),
   event('ridge', 'west', 'Calibrate west relay', -23, -9.6, {
     requires: ['dispatch'], proof: 'west',
-    puzzle: { note: { spot: 'dispatch', line: 0 }, title: 'West relay', hint: 'The reference sweep reads 84.2, 85.4, 86.6. Find the next frequency, then set the pulse pattern from the dispatch.', choices: ['87.2 MHz', '87.8 MHz', '88.4 MHz', 'Short · Short · Long', 'Long · Short · Short'], answer: [1, 3], feedback: 'prefix' },
+    puzzle: { note: { spot: 'dispatch', line: 0 }, steps: ['Carrier found. Now the pulse.'], title: 'West relay', hint: 'The reference sweep reads 84.2, 85.4, 86.6. Find the next frequency, then set the pulse pattern from the dispatch.', choices: ['87.2 MHz', '87.8 MHz', '88.4 MHz', 'Short · Short · Long', 'Long · Short · Short'], answer: [1, 3], feedback: 'prefix' },
     lines: [['WEST RELAY', 'Bearing 12°. Delay 4.2 seconds. The reply arrived before the beacon finished transmitting.']],
   }),
   event('ridge', 'center', 'Calibrate center relay', 1, -8.6, {
     requires: ['dispatch'], proof: 'center',
-    puzzle: { note: { spot: 'dispatch', line: 0 }, title: 'Center relay', hint: 'The sweep starts at 83.0 MHz. One step is 0.8 MHz. Phase lock occurs seven steps above the start. Then set the pulse pattern.', choices: ['87.8 MHz', '88.6 MHz', '89.4 MHz', 'Short · Short · Long', 'Short · Long · Short'], answer: [1, 3], feedback: 'prefix' },
+    puzzle: { note: { spot: 'dispatch', line: 0 }, steps: ['Carrier found. Now the pulse.'], title: 'Center relay', hint: 'The sweep starts at 83.0 MHz. One step is 0.8 MHz. Phase lock occurs seven steps above the start. Then set the pulse pattern.', choices: ['87.8 MHz', '88.6 MHz', '89.4 MHz', 'Short · Short · Long', 'Short · Long · Short'], answer: [1, 3], feedback: 'prefix' },
     lines: [['CENTER RELAY', 'Bearing 38°. The return is coming from below, through solid ice.']],
   }),
   event('ridge', 'east', 'Calibrate east relay', 25, -.6, {
     requires: ['dispatch'], proof: 'east',
-    puzzle: { note: { spot: 'dispatch', line: 0 }, title: 'East relay', hint: 'The target is exactly midway between 85.1 MHz and 90.3 MHz. Set the frequency, then the pulse pattern.', choices: ['86.7 MHz', '87.6 MHz', '87.7 MHz', 'Long · Short · Short', 'Short · Short · Long'], answer: [2, 4], feedback: 'prefix' },
+    puzzle: { note: { spot: 'dispatch', line: 0 }, steps: ['Carrier found. Now the pulse.'], title: 'East relay', hint: 'The target is exactly midway between 85.1 MHz and 90.3 MHz. Set the frequency, then the pulse pattern.', choices: ['86.7 MHz', '87.6 MHz', '87.7 MHz', 'Long · Short · Short', 'Short · Short · Long'], answer: [2, 4], feedback: 'prefix' },
     lines: [['EAST RELAY', 'Bearing 81°. Origin unresolved. Compare all three bearings at the survey receiver.'], ['UNKNOWN VOICE', 'That makes three. You always get the third one right.']],
   }),
   event('ridge', 'survey', 'Read the survey board', 15.5, -8.25, {
@@ -213,7 +217,7 @@ export const hotspots: Hotspot[] = [
     puzzle: { note: { spot: 'survey', line: 0 }, title: 'Triangulate the return', hint: 'Match all three relay bearings to one candidate on the survey board. Both sets of readings are saved in Field Notes.', choices: ['Station Four', 'Trench Six', 'Borehole Nine'], answer: [2], feedback: 'prefix' },
     lines: [
       ['SURVEY RECEIVER', 'The source is below an old survey trench. The borehole lift badge was last seen with Mara’s field recorder.'],
-      ['SURVEY RECEIVER', 'Trench entry unlocked. Heated crates along the trench will buy time. Thin ice is striped yellow. Get a run-up and jump across, or go around the edges.'],
+      ['SURVEY RECEIVER', 'Trench open. Heated crates along it buy time. Jump the yellow-striped ice or go around it.'],
     ],
   }),
   event('ridge', 'thermos', 'Inspect the thermos', -5, -15, { record: 'thermos' }),
@@ -223,9 +227,9 @@ export const hotspots: Hotspot[] = [
   event('crevasse', 'recorder', 'Recover Mara’s recorder', -16, 5.9, {
     proof: 'recorder',
     lines: [
-      ['MARA · FIELD RECORDING', 'The chamber transmits three tones. We used the reverse sequence to make it go quiet. I painted the order on the survey flags south of the trench, in case I stopped trusting my memory.'],
-      ['MARA · FIELD RECORDING', 'I stashed the lift badge at the emergency receiver farther down the trench. If you get stuck, stand by the heater until the white patches leave your vision.'],
-      ['VOSS', 'The flags will be hard to read in this light. The figures turn toward a lit flashlight, so I should switch it on only when I get there.'],
+      ['MARA · FIELD RECORDING', 'The chamber sends three tones. Played backwards, they quiet it. I painted the order on the flags south of the trench.'],
+      ['MARA · FIELD RECORDING', 'The lift badge is at the emergency receiver down the trench. If white patches come, stand by a heater.'],
+      ['VOSS', 'Too dark to read the flags. A lit flashlight draws them, so only switch it on once I’m there.'],
     ],
   }),
   event('crevasse', 'flags', 'Read the survey flags', 2, 16, {
@@ -237,7 +241,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('crevasse', 'echo', 'Decode the emergency receiver', 1, -.75, {
     requires: ['recorder', 'flags'], proof: 'echo',
-    puzzle: { note: { spot: 'flags', line: 0 }, title: 'Echo lock', hint: 'Reverse the three tones painted on the survey flags. Each labeled button also plays its pitch if sound is on.', choices: ['Low', 'Middle', 'High'], answer: [1, 2, 0], feedback: 'prefix' },
+    puzzle: { note: { spot: 'flags', line: 0 }, steps: ['The middle tone holds.', 'The high tone holds. One more.'], title: 'Echo lock', hint: 'Reverse the three tones painted on the survey flags. Each labeled button also plays its pitch if sound is on.', choices: ['Low', 'Middle', 'High'], answer: [1, 2, 0], feedback: 'prefix' },
     lines: [['EMERGENCY RECEIVER', 'Badge returned. Authorization valid for one lift descent.'], ['VOSS', 'The badge has my photo. The name underneath is Mara’s.']],
   }),
   event('crevasse', 'override', 'Release the borehole lift', 16, 2.9, {
@@ -255,7 +259,7 @@ export const hotspots: Hotspot[] = [
     lines: [
       ['DEPTH CHART', 'Meter 090: first voice. Meter 120: second voice. Meter 150: two researchers answer as one.'],
       ['MARA · MARGIN NOTE', 'Emergency lock uses the depth of the first reply, one digit per dial. The system tells you how many dials are in the right position.'],
-      ['VOSS', 'The first voice must be at 090. The drill console is directly south of the shaft. First I need to stabilize the dampers by the old generator.'],
+      ['VOSS', 'First voice at 090, then. The drill console is south of the shaft, but the dampers by the old generator come first.'],
     ],
   }),
   event('borehole', 'dampers', 'Stabilize the vibration dampers', -5, 5.25, {
@@ -266,7 +270,7 @@ export const hotspots: Hotspot[] = [
   event('borehole', 'chamber', 'Unlock the listening chamber', 3, .35, {
     requires: ['depth', 'dampers'], proof: 'chamber',
     cycleLines: [['THE SIGNAL', 'Welcome back. I kept your chair.']],
-    puzzle: { note: { spot: 'depth', line: 0 }, title: 'Drill interlock', hint: 'Enter the three-digit depth of the first voice. The chart is in Field Notes. Digits may repeat.', choices: ['0', '3', '6', '9'], answer: [0, 3, 0], feedback: 'count' },
+    puzzle: { note: { spot: 'depth', line: 0 }, title: 'Drill interlock', hint: 'Turn the dials to the three-digit depth of the first voice, then release the interlock.', choices: ['Release the interlock'], dials: { values: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'], count: 3 }, answer: [0, 9, 0], feedback: 'count' },
     lines: [
       ['THE SIGNAL', 'I’m not trying to hurt you. Every time you call, I learn a little more about being you.'],
       ['VOSS', 'Where are the others?'],
@@ -274,8 +278,22 @@ export const hotspots: Hotspot[] = [
       ['CHAMBER LOG', 'The channel routing transcript is on the west rack. Take it to the control desk before choosing how to use the return.'],
     ],
   }),
+  event('borehole', 'voices', 'Listen to the voice recordings', 7.5, 1.5, {
+    requires: ['chamber'], proof: 'voices',
+    puzzle: {
+      note: { spot: 'terminal', line: 1 }, title: 'Find your own voice',
+      hint: 'Three recordings answer as Voss. Only one could be you. Your first words at Kestrel are quoted below.',
+      choices: ['“I arrived on the fourteenth. I have been waiting for you.”', '“This is Dr. Voss. I just arrived. Who is transmitting?”', '“I never left. The others did.”'],
+      answer: [1], feedback: 'prefix',
+      reject: 'The recording laughs in your voice. That isn’t you. Listen again.',
+    },
+    lines: [
+      ['THE SIGNAL', 'You found yourself. Most of them never do.'],
+      ['CHAMBER LOG', 'Voice print confirmed. Routing access granted.'],
+    ],
+  }),
   event('borehole', 'transcript', 'Read the channel routing transcript', -11.5, -1.75, {
-    requires: ['chamber'], proof: 'transcript',
+    requires: ['chamber', 'voices'], proof: 'transcript',
     lines: [
       ['CHANNEL TRANSCRIPT', 'The first receiver joined all three return channels in west, center, east order. Cancel the return by routing in reverse order.'],
       ['MARA · HANDWRITTEN', 'You can seal the chamber or warn the coast. I keep waiting to hear what you chose.'],
@@ -283,7 +301,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('borehole', 'reverse', 'Reverse the three return channels', 10.8, -1.8, {
     requires: ['chamber', 'transcript'], proof: 'reverse',
-    puzzle: { note: { spot: 'transcript', line: 0 }, title: 'Phase reversal', hint: 'Review the chamber log. Route all three relays in reverse order to cancel the return.', choices: ['West', 'Center', 'East'], answer: [2, 1, 0], feedback: 'prefix' },
+    puzzle: { note: { spot: 'transcript', line: 0 }, steps: ['East channel cancelled.', 'Center channel cancelled. The chamber goes quieter.'], title: 'Phase reversal', hint: 'Review the chamber log. Route all three relays in reverse order to cancel the return.', choices: ['West', 'Center', 'East'], answer: [2, 1, 0], feedback: 'prefix' },
     lines: [['CONTROL DESK', 'Phase cancelled. You have one remaining transmission. Seal the chamber here, or use it to send a warning to the coast.']],
   }),
   event('borehole', 'decision', 'Choose what to do with the signal', 10.8, -1.8, {
@@ -311,7 +329,7 @@ export const hotspots: Hotspot[] = [
   }),
   event('coast', 'boathouse', 'Open the boathouse tide lock', -12, -9.6, {
     afterEnding: true, requires: ['coastLog', 'tideBoard'], proof: 'feedKey',
-    puzzle: { note: { spot: 'tide-board', line: 0 }, title: 'Boathouse tide lock', hint: 'Set one dial for each tide reading at 06:00, 12:00, and 18:00. The tide board is saved in Field Notes.', choices: ['2', '5', '8', '11'], answer: [1, 2, 1], feedback: 'count' },
+    puzzle: { note: { spot: 'tide-board', line: 0 }, title: 'Boathouse tide lock', hint: 'Turn one dial for each tide reading at 06:00, 12:00 and 18:00, then open the lock.', choices: ['Open the lock'], dials: { values: ['2', '5', '8', '11'], count: 3 }, answer: [1, 2, 1], feedback: 'count' },
     lines: [
       ['BOATHOUSE', 'The mast feed key hangs beside a survival suit. Someone tore off its name tag.'],
       ['ILSE · TAPED NOTE', 'Mast lamps from the top: red, white, green. The echo climbs the mast, so starve it from below. Bottom feed first, then the top. The middle goes last.'],
@@ -326,7 +344,7 @@ export const hotspots: Hotspot[] = [
   event('coast', 'suit', 'Search the survival suit', -16.6, -9.6, { afterEnding: true, requires: ['feedKey'], record: 'tag' }),
   event('coast', 'mast', 'Cut the mast lamp feeds', 4, 12.4, {
     afterEnding: true, requires: ['feedKey'], proof: 'mast',
-    puzzle: { note: { spot: 'boathouse', line: 1 }, title: 'Mast feed cutoff', hint: 'Cut the three lamp feeds in Ilse’s order. Her note is saved in Field Notes.', choices: ['Red', 'White', 'Green'], answer: [2, 0, 1], feedback: 'prefix',
+    puzzle: { note: { spot: 'boathouse', line: 1 }, steps: ['Green goes dark. The mast hum drops.', 'Red goes dark. Something at the top answers, then stops.'], title: 'Mast feed cutoff', hint: 'Cut the three lamp feeds in Ilse’s order. Her note is saved in Field Notes.', choices: ['Red', 'White', 'Green'], answer: [2, 0, 1], feedback: 'prefix',
       reject: 'The lamps flare back on. Start again from the bottom of the mast.' },
     lines: [
       ['COAST MAST', 'The lamps go dark from the bottom up. For a moment the middle one relights by itself, then stays out.'],
@@ -381,6 +399,7 @@ const objectives: [Milestone, string, string][] = [
   ['depth', 'Find the depth of the first reply', 'depth'],
   ['dampers', 'Stabilize the drill’s vibration dampers', 'dampers'],
   ['chamber', 'Unlock the listening chamber', 'chamber'],
+  ['voices', 'Pick out your own voice among the recordings', 'voices'],
   ['transcript', 'Recover the original channel routing transcript', 'transcript'],
   ['reverse', 'Reverse the return channels', 'reverse'],
 ];
@@ -408,7 +427,8 @@ export function currentObjective(save: Save): { text: string; target: string; va
   }
   for (const [flag, text, target] of objectives) {
     // Checkpoints from before the survey flags existed may already have the badge.
-    if (has(save, flag) || flag === 'flags' && has(save, 'echo')) continue;
+    // Checkpoints from before a step existed may already be past it.
+    if (has(save, flag) || flag === 'flags' && has(save, 'echo') || flag === 'voices' && has(save, 'transcript')) continue;
     if (flag === 'triangulated') {
       const missing = (['west', 'center', 'east'] as const).filter(relay => !has(save, relay));
       if (missing.length) return { text: 'Calibrate the ridge relays ({0}/3)', values: [3 - missing.length], target: missing[0] };

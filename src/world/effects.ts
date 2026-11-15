@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Body, GroundPoint } from '../systems/movement';
 import type { Print } from '../systems/field';
+import { seaIce } from './expedition-layout';
 
 /** The flashlight beam, the objective marker, the figure and footprints in the snow. */
 export class SceneEffects {
@@ -24,6 +25,8 @@ export class SceneEffects {
   private readonly breath: THREE.Sprite[] = [];
   private breathTimer = 0;
   private readonly trail: THREE.InstancedMesh;
+  private readonly tideWater: THREE.Mesh[] = [];
+  private tideLevel = 0;
 
   constructor(scene: THREE.Scene) {
     scene.add(this.flashlight, this.flashlight.target);
@@ -115,6 +118,17 @@ export class SceneEffects {
     this.trail.count = 0;
     this.trail.frustumCulled = false;
     scene.add(this.trail);
+
+    // High water floods the sea ice on the coast.
+    for (const sheet of seaIce) {
+      const water = new THREE.Mesh(new THREE.PlaneGeometry(sheet.width + .6, sheet.depth + .6),
+        new THREE.MeshBasicMaterial({ color: '#1d4b60', transparent: true, opacity: 0, depthWrite: false }));
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(sheet.x, .05, sheet.z);
+      water.visible = false;
+      this.tideWater.push(water);
+      scene.add(water);
+    }
   }
 
   /** Lays a fresh line of bootprints between two points (empty clears it). */
@@ -159,7 +173,13 @@ export class SceneEffects {
     flashlight: boolean; marker?: GroundPoint; showPrints: boolean; prints: Print[];
     figure?: GroundPoint; alert: number;
     ghost?: GroundPoint & { opacity: number }; apparition?: GroundPoint & { opacity: number }; flicker?: boolean;
+    tide?: number;
   }) {
+    this.tideLevel += ((view.tide ?? 0) - this.tideLevel) * .04;
+    for (const water of this.tideWater) {
+      water.visible = view.tide !== undefined && this.tideLevel > .02;
+      (water.material as THREE.MeshBasicMaterial).opacity = .78 * this.tideLevel * (.9 + Math.sin(clock * 2 + water.position.x) * .1);
+    }
     const { x, y, z, facing } = body;
     this.flashlight.visible = view.flashlight;
     // The beam stutters when something is close, or when a scene event asks for it.

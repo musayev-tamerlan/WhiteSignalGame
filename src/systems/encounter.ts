@@ -51,6 +51,7 @@ export class Encounter {
     note?: [speaker: string, text: string]) {
     this.note = note;
     if (puzzle.dial) { this.tune(puzzle, sound, solved, tuning); return; }
+    if (puzzle.dials) { this.turn(puzzle, sound, solved); return; }
     this.attempt = [];
     const gauge = () => this.attempt.reduce((value, index) =>
       value + Number(puzzle.choices[index].replace('−', '-')), 3);
@@ -78,7 +79,7 @@ export class Encounter {
         this.needle(gauge());
         this.feedback(tf('Vibration: {0}. Enter the next adjustment.', gauge()));
       }
-      else this.feedback(t('Enter the next step.'));
+      else this.feedback(t(puzzle.steps?.[index] ?? 'Enter the next step.'));
       const slots = puzzle.answer.map((_, i) => {
         const slot = document.createElement('span');
         slot.textContent = t(puzzle.choices[this.attempt[i]] ?? '—');
@@ -90,6 +91,41 @@ export class Encounter {
       this.needle(3);
       this.feedback(tf('Vibration: {0}. Enter the next adjustment.', '+3'));
     }
+  }
+
+  /** Physical dials: ▲ and ▼ turn each one; the single choice tries the lock. */
+  private turn(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void) {
+    const { values, count } = puzzle.dials!;
+    const settings = Array.from({ length: count }, () => 0);
+    const columns = settings.map((_, dial) => {
+      const column = document.createElement('div');
+      column.className = 'dial-column';
+      const shown = document.createElement('strong');
+      const turn = (step: number) => {
+        settings[dial] = (settings[dial] + step + values.length) % values.length;
+        shown.textContent = t(values[settings[dial]]);
+        sound(settings[dial]);
+      };
+      const button = (label: string, step: number, name: string) => {
+        const element = document.createElement('button');
+        element.textContent = label;
+        element.setAttribute('aria-label', `${name} ${dial + 1}`);
+        element.addEventListener('click', () => turn(step));
+        return element;
+      };
+      shown.textContent = t(values[0]);
+      column.append(button('▲', 1, 'Next'), shown, button('▼', -1, 'Previous'));
+      return column;
+    });
+    this.show(puzzle.title, puzzle.hint, puzzle.choices, () => {
+      const correct = puzzle.answer.filter((entry, i) => entry === settings[i]).length;
+      if (correct === puzzle.answer.length) {
+        this.close();
+        solved();
+      } else this.feedback(tf('{0} of {1} dials were in the right position. Try again.', correct, puzzle.answer.length));
+    }, this.note);
+    el('sequence').replaceChildren(...columns);
+    (columns[0].querySelector('button') as HTMLButtonElement).focus();
   }
 
   /** A dial the player sweeps; static in the feedback line fades near the target. */
