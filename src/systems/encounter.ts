@@ -9,8 +9,14 @@ export class Encounter {
 
   get open() { return !el('puzzle').hidden; }
 
-  show(title: string, hint: string, choices: string[], select: (choice: number) => void) {
+  show(title: string, hint: string, choices: string[], select: (choice: number) => void, note?: [speaker: string, text: string]) {
     this.select = select;
+    el('puzzleNote').hidden = !note;
+    if (note) {
+      el('puzzleNoteSpeaker').textContent = t(note[0]);
+      el('puzzleNoteText').textContent = t(note[1]);
+    }
+    el('puzzleGauge').hidden = true;
     el('encounterTitle').textContent = t(title);
     el('encounterHint').textContent = t(hint);
     el('sequence').replaceChildren();
@@ -29,9 +35,21 @@ export class Encounter {
   }
 
   private stopTuning?: () => void;
+  private note?: [speaker: string, text: string];
+
+  /** A live needle from −6 to +6 for the vibration dampers. */
+  private needle(value: number) {
+    el('puzzleGauge').hidden = false;
+    const clamped = Math.max(-6, Math.min(6, value));
+    el('puzzleGaugeNeedle').style.left = `${50 + clamped / 6 * 46}%`;
+    el('puzzleGauge').classList.toggle('zero', value === 0);
+    el('puzzleGauge').querySelector('b')!.textContent = value > 0 ? `+${value}` : String(value);
+  }
 
   /** `tuning` receives how close a dial is to its target, 0 to 1, and null when it closes. */
-  puzzle(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void, tuning?: (closeness: number | null) => void) {
+  puzzle(puzzle: Puzzle, sound: (choice: number) => void, solved: () => void, tuning?: (closeness: number | null) => void,
+    note?: [speaker: string, text: string]) {
+    this.note = note;
     if (puzzle.dial) { this.tune(puzzle, sound, solved, tuning); return; }
     this.attempt = [];
     const gauge = () => this.attempt.reduce((value, index) =>
@@ -50,12 +68,16 @@ export class Encounter {
           solved();
           return;
         }
+        if (puzzle.feedback === 'gauge') this.needle(gauge());
         const result = puzzle.feedback === 'gauge'
           ? tf('Final vibration: {0}. The gauge reset to +3. Check the required sequence.', gauge())
           : tf('{0} of {1} dials were in the right position. Try again.', correct, puzzle.answer.length);
         this.attempt = [];
         this.feedback(result);
-      } else if (puzzle.feedback === 'gauge') this.feedback(tf('Vibration: {0}. Enter the next adjustment.', gauge()));
+      } else if (puzzle.feedback === 'gauge') {
+        this.needle(gauge());
+        this.feedback(tf('Vibration: {0}. Enter the next adjustment.', gauge()));
+      }
       else this.feedback(t('Enter the next step.'));
       const slots = puzzle.answer.map((_, i) => {
         const slot = document.createElement('span');
@@ -63,7 +85,11 @@ export class Encounter {
         return slot;
       });
       el('sequence').replaceChildren(...slots);
-    });
+    }, this.note);
+    if (puzzle.feedback === 'gauge') {
+      this.needle(3);
+      this.feedback(tf('Vibration: {0}. Enter the next adjustment.', '+3'));
+    }
   }
 
   /** A dial the player sweeps; static in the feedback line fades near the target. */
@@ -106,7 +132,7 @@ export class Encounter {
         this.close();
         solved();
       } else this.feedback(tf('Nothing but static on {0} {1}. Keep sweeping.', value().toFixed(1), t(dial.unit)));
-    });
+    }, this.note);
     slider.addEventListener('input', update);
     el('sequence').replaceChildren(slider, readout, meter);
     this.stopTuning = () => tuning?.(null);

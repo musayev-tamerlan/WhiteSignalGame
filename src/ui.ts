@@ -30,7 +30,7 @@ export function createUI() {
   <div id="puzzle" class="overlay" hidden>
    <section class="panel encounter" role="dialog" aria-modal="true" aria-labelledby="encounterTitle">
     <div class="eyebrow" id="encounterTag" data-i18n="KESTREL / FIELD SYSTEMS">KESTREL / FIELD SYSTEMS</div>
-    <h2 id="encounterTitle"></h2><p id="encounterHint"></p>
+    <h2 id="encounterTitle"></h2><p id="encounterHint"></p><blockquote id="puzzleNote" hidden><small id="puzzleNoteSpeaker"></small><span id="puzzleNoteText"></span></blockquote><div id="puzzleGauge" hidden><span id="puzzleGaugeNeedle"></span><b>0</b></div>
     <div class="sequence" id="sequence"></div>
     <p id="puzzleFeedback" role="status"></p>
     <div class="encounter-choices" id="choices"></div>
