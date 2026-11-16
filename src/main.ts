@@ -24,6 +24,9 @@ import { Voice } from './systems/voice';
 import { Joystick } from './systems/joystick';
 import { signalStrength } from './systems/compass';
 import { YardStalker } from './systems/stalker';
+import { LoopMode } from './loop/mode';
+import { inTelegram, setupTelegram } from './loop/telegram';
+import type { LevelDef } from './loop/levels';
 import { blackout, ghostAt, sceneEvents, type Cue } from './world/events';
 
 createUI();
@@ -43,6 +46,28 @@ const scene=new THREE.Scene();scene.background=new THREE.Color('#152b3b');scene.
 const levels=new Levels(scene), player=new Character(scene), camera=new FollowCamera(), input=new Input(), audio=new AudioSystem();
 const effects = new SceneEffects(scene);
 const stalker = new YardStalker();
+// Loop mode borrows the renderer, camera, input and audio; the campaign pauses while it runs.
+const loop = new LoopMode({
+  scene, player, camera, input, audio, voice, settings,
+  makeCharacter: () => new Character(scene),
+  vibrate: pattern => vibrate(pattern),
+  onExit: () => {
+    effects.setVisible(true);
+    changeArea(state.level, state, false);
+    setPanel('menu');
+  },
+});
+
+function enterLoop(shared?: LevelDef) {
+  setPanel();
+  encounter.close();
+  dialogue = undefined;
+  el('dialogue').hidden = true;
+  voice.stop();
+  levels.hideAll();
+  effects.setVisible(false);
+  loop.enter(shared);
+}
 const field = new FieldConditions();
 const encounter = new Encounter();
 const arrow = el('objectiveArrow');
@@ -350,6 +375,7 @@ function setPanel(next?: Panel) {
       startExpedition(0);
     });
     if (has(state, 'caller')) action('NEW CYCLE · KEEP YOUR MEMORIES', () => startExpedition(state.cycle + 1));
+    action('◈ LOOP · PLAY WITH YOUR PAST SELVES', () => enterLoop());
     action('SETTINGS', () => { settingsReturn = 'menu'; setPanel('settings'); });
     action('ACHIEVEMENTS', () => { settingsReturn = 'menu'; setPanel('achievements'); });
   } else if (next === 'settings') {
@@ -957,6 +983,7 @@ el('restartButton').addEventListener('click', () => {
 });
 
 function back() {
+  if (loop.active) { loop.back(); return; }
   if (panel === 'settings' || panel === 'achievements') setPanel(settingsReturn);
   else if (panel === 'menu') return;
   else if (panel) setPanel();
@@ -998,13 +1025,15 @@ window.addEventListener('keydown', event => {
 
 // Gamepad focus moves between the buttons of whichever menu or puzzle is open.
 input.onPad = (command: PadCommand) => {
+  if (loop.active && (command === 'pause' || command === 'back')) { if (command === 'pause') loop.show('select'); else loop.back(); return; }
+  if (loop.active && !loop.overlayOpen) return;
   if (command === 'pause') {
     if (panel === 'pause') setPanel();
     else if (!panel && !encounter.open) setPanel('pause');
     return;
   }
   if (command === 'back') { back(); return; }
-  const container = panel ? el('overlay') : el('puzzle');
+  const container = loop.active ? el('loopOverlay') : panel ? el('overlay') : el('puzzle');
   const focusable = Array.from(container.querySelectorAll<HTMLElement>('button:not([disabled]):not(.hidden-ui), input'))
     .filter(item => item.offsetParent !== null);
   const active = document.activeElement as HTMLElement | null;
@@ -1043,6 +1072,12 @@ function frame(now: number) {
   const delta = Math.min((now - last) / 1000, .1);
   last = now;
   if (document.hidden) return;
+  if (loop.active) {
+    input.pollGamepad(loop.overlayOpen);
+    loop.frame(delta);
+    renderer.render(scene, camera.camera);
+    return;
+  }
   input.pollGamepad(Boolean(panel || encounter.open));
   if (!panel) {
     accumulator += delta;
@@ -1065,6 +1100,8 @@ if (import.meta.env.DEV) {
     scheduled,
     persist,
     pad: () => input.pollGamepad(Boolean(panel || encounter.open)),
+    loop,
+    enterLoop,
     grant: (...flags: typeof state.progress) => { state.progress.push(...flags.filter(flag => !has(state, flag))); updateObjective(); },
     // Advance the fixed simulation without rendering, for checks in a hidden tab.
     tick: (frames = 1) => { for (let i = 0; i < frames; i++) if (!panel) fixed(1 / 60); },
@@ -1080,4 +1117,9 @@ showSoundStatus();
 resize();
 changeArea(state.level, state, false);
 setPanel('menu');
+setupTelegram();
+// A shared Loop level opens straight away; inside Telegram, Loop is the front door.
+const sharedLevel = LoopMode.fromHash(location.hash);
+if (sharedLevel) enterLoop(sharedLevel);
+else if (inTelegram()) enterLoop();
 requestAnimationFrame(frame);

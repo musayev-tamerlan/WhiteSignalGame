@@ -37,6 +37,13 @@ export function createUI() {
     <button id="exitPuzzle" class="text-button" data-i18n="STEP BACK · ESC">STEP BACK · ESC</button>
    </section>
   </div>
+  <section id="loopHud" hidden aria-label="Loop">
+   <div class="loop-top"><button id="loopMenu" aria-label="Signals">☰</button><div class="loop-time"><small id="loopLevel"></small><strong id="loopClock">03:13:00</strong><small id="loopSteps"></small></div><div id="loopLoops"></div></div>
+   <p id="loopMessage" aria-live="polite"></p>
+   <div class="loop-pad" role="group" aria-label="Move"><button data-loop="L" aria-label="Up-left"><i style="--turn:-45deg">▲</i></button><button data-loop="U" aria-label="Up-right"><i style="--turn:45deg">▲</i></button><button data-loop="D" aria-label="Down-left"><i style="--turn:-135deg">▲</i></button><button data-loop="R" aria-label="Down-right"><i style="--turn:135deg">▲</i></button></div>
+   <div class="loop-actions"><button data-loop="W"><span data-i18n="WAIT">WAIT</span></button><button data-loop="close" class="loop-close"><span data-i18n="CLOSE LOOP">CLOSE LOOP</span></button><button data-loop="restart" aria-label="Restart loop">↺</button><button data-loop="undo" aria-label="Undo loop">↶</button><button data-loop="hint" aria-label="Hint">💡</button></div>
+  </section>
+  <div id="loopOverlay" class="overlay" hidden><section class="panel loop-panel"><div class="eyebrow">THE WHITE SIGNAL · LOOP</div><h2 id="loopPanelTitle"></h2><div id="loopPanelContent"></div><div id="loopPanelActions"></div></section></div>
   <div id="overlay" class="overlay" hidden><section class="panel"><div class="eyebrow">THE WHITE SIGNAL</div><h2 id="panelTitle">Expedition paused</h2><div id="panelContent"></div><div id="panelActions"></div><button class="primary" id="resumeButton"><span data-i18n="RESUME EXPEDITION">RESUME EXPEDITION</span> <span>→</span></button><button id="restartButton" class="text-button" data-i18n="RESTART EXPEDITION">RESTART EXPEDITION</button></section></div>
  </main>`;
 }

@@ -242,3 +242,69 @@
 .dial-column button:hover, .dial-column button:focus-visible { background: #294147; outline: 2px solid #f0c29b; outline-offset: 1px; }
 .dial-column strong { display: block; width: 100%; padding: 10px 2px; text-align: center; border: 1px solid #c39d7955; color: #e7d3b8; font-size: 14px; font-weight: 500; letter-spacing: .06em; }
 .sequence:has(.dial-column) { flex-wrap: nowrap; gap: 8px; }
+
+/* ——— Loop mode ——— */
+#game.loop-mode .hud, #game.loop-mode .location, #game.loop-mode .scene-label, #game.loop-mode .world-caption,
+#game.loop-mode .desktop-controls, #game.loop-mode .slice-label, #game.loop-mode .touch-controls, #game.loop-mode #stickZone,
+#game.loop-mode .chapter, #game.loop-mode #interact, #game.loop-mode #caption, #game.loop-mode #toast { display: none !important; }
+#loopHud { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+#loopHud[hidden] { display: none; }
+#loopHud button { pointer-events: auto; border: 1px solid #9cb9c355; background: #142a37cc; color: #e6eef0; font: inherit; cursor: pointer; }
+#loopHud button:active, #loopHud button:hover { background: #2a4652; }
+.loop-top { position: absolute; top: max(86px, calc(env(safe-area-inset-top) + 70px)); left: 4%; right: 4%; display: flex; align-items: center; gap: 14px; }
+.loop-top #loopMenu { width: 44px; height: 44px; font-size: 18px; }
+.loop-time { display: grid; }
+.loop-time small { font-size: 9px; letter-spacing: .14em; color: #9fb6bb; }
+.loop-time strong { font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 500; color: #e3bd9a; letter-spacing: .06em; }
+.loop-time strong.late { color: #ff8a6a; }
+#loopLoops { margin-left: auto; font-size: 11px; letter-spacing: .12em; color: #bfe6ff; }
+#loopMessage { position: absolute; left: 50%; top: max(160px, calc(env(safe-area-inset-top) + 144px)); transform: translateX(-50%); width: min(92%, 560px); margin: 0;
+  padding: 8px 12px; background: #0a1319c8; border-left: 2px solid #d9a876; color: #d6e1df; font-size: 12px; line-height: 1.5; zoom: var(--text-scale, 1); }
+#loopMessage:empty { display: none; }
+#loopMessage.pulse { animation: loop-pulse .5s ease-out; }
+@keyframes loop-pulse { from { background: #2a4652; } }
+.loop-pad { position: absolute; left: 4%; bottom: max(26px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(2, 64px); gap: 8px; }
+.loop-pad button { width: 64px; height: 64px; border-radius: 14px; font-size: 34px; font-family: system-ui, sans-serif; line-height: 1; }
+.loop-actions { position: absolute; right: 4%; bottom: max(26px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, auto); gap: 8px; justify-items: stretch; }
+.loop-actions button { min-height: 56px; padding: 0 14px; border-radius: 12px; font-size: 11px; letter-spacing: .1em; }
+.loop-actions .loop-close { grid-column: span 2; background: #3a5a3f; border-color: #79e0b088; }
+.loop-actions [data-loop='W'] { grid-column: span 1; }
+.loop-panel { max-width: 560px; }
+#loopPanelActions { display: grid; gap: 8px; margin-top: 14px; }
+#loopPanelActions button, .loop-levels button, .loop-room button, .loop-suits button {
+  min-height: 42px; padding: 8px 12px; border: 1px solid #78938d70; background: #0f242d; color: inherit; font: inherit; font-size: 11px; letter-spacing: .06em; text-align: left; cursor: pointer; }
+#loopPanelActions button:hover, .loop-levels button:hover, #loopPanelActions button:focus-visible, .loop-levels button:focus-visible { background: #294147; outline: 2px solid #f0c29b; outline-offset: 1px; }
+.loop-levels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+.loop-levels button:disabled { opacity: .45; cursor: default; }
+.loop-room { padding: 8px 0; border-bottom: 1px solid #90a7b322; display: grid; gap: 6px; font-size: 11px; }
+.loop-room strong { color: #e3bd9a; font-weight: 500; }
+.loop-room p { margin: 0; color: #c7d6d9; font-size: 10px; line-height: 1.6; }
+.loop-room button:disabled { opacity: .4; }
+.loop-suits { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.loop-suits button { border-width: 2px; }
+.loop-stars { font-size: 34px; color: #f0c27a; letter-spacing: .2em; margin: 6px 0 !important; }
+.loop-label { margin: 10px 0 0 !important; font-size: 10px; color: #9fb6bb; }
+.loop-input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #78938d70; background: #0b1a21; color: inherit; font: inherit; }
+.loop-numbers { display: flex; gap: 12px; margin-bottom: 8px; font-size: 10px; }
+.loop-numbers label { display: flex; align-items: center; gap: 6px; }
+.loop-numbers input { width: 56px; padding: 6px; border: 1px solid #78938d70; background: #0b1a21; color: inherit; font: inherit; }
+.loop-palette { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.loop-palette button { width: 34px; height: 34px; border: 1px solid #78938d70; background: #0f242d; color: #e6eef0; font-size: 14px; cursor: pointer; }
+.loop-palette button.active { outline: 2px solid #f0c29b; background: #294147; }
+.loop-grid { display: grid; gap: 2px; margin: 6px 0; }
+.loop-grid .cell { aspect-ratio: 1; min-width: 0; padding: 0; border: 0; font-size: clamp(9px, 2.6vw, 14px); color: #f0d9b5; cursor: pointer; }
+.loop-grid .tile-wall { background: #2b3f4a; color: #6c8189; }
+.loop-grid .tile-floor { background: #53666b; }
+.loop-grid .tile-thing { background: #3d5560; }
+@media (pointer: coarse), (max-width: 700px) {
+  .loop-top { top: max(78px, calc(env(safe-area-inset-top) + 64px)); }
+  .loop-time strong { font-size: 20px; }
+  .loop-pad { grid-template-columns: repeat(2, 58px); }
+  .loop-pad button { width: 58px; height: 58px; }
+  .loop-actions { grid-template-columns: repeat(3, 52px); }
+  .loop-actions [data-loop='W'] { grid-column: span 1; }
+  .loop-actions .loop-close { grid-column: span 2; }
+  .loop-actions button { min-height: 50px; font-size: 9px; padding: 0 6px; }
+}
+
+.loop-pad button i { display: inline-block; font-style: normal; font-size: 22px; color: #e3bd9a; transform: rotate(var(--turn)); }

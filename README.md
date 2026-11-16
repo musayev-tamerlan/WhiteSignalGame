@@ -26,6 +26,10 @@ npm run preview # serve production build locally
 
 Deploy the `dist/` directory to any static host. No environment variables or backend are required. The two web fonts are optional; system fallbacks work offline.
 
+## Loop mode
+
+**◈ LOOP** in the title menu opens a short-session puzzle mode built for phones: each attempt lasts until 03:14, then a past Voss replays it alongside you, so you solve rooms by cooperating with yourself. It has 10 levels, a daily signal with a share card, a station to restore with stars, and a level editor that shares levels as links. See [docs/LOOP.md](docs/LOOP.md); shipping to Telegram and app stores is in [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
+
 ## Play
 
 - WASD or the arrow keys: move

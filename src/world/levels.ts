@@ -452,6 +452,12 @@ export class Levels {
   });
  }
 
+ /** Hides every campaign area, for Loop mode's own board. */
+ hideAll() {
+  this.outside.visible = this.inside.visible = this.snow.visible = false;
+  for (const group of this.extra.values()) group.visible = false;
+ }
+
  setLevel(area: Area) {
   if (area !== 'outside') this.setPower(1);
   this.outside.visible = area === 'outside';

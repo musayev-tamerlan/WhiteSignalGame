@@ -111,6 +111,12 @@ export class Input {
     }
   }
 
+  /** Drops pending presses but keeps held keys, so a key handled elsewhere isn't used twice. */
+  consumeTaps() {
+    this.taps.clear();
+    this.actionTaps.clear();
+  }
+
   clear() {
     this.keys.clear(); this.taps.clear(); this.touch.clear(); this.actionTaps.clear();
     document.querySelectorAll('.held').forEach(e => e.classList.remove('held'));

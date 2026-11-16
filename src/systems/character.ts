@@ -63,6 +63,19 @@ export class Character {
     scene.add(this.shadow, this.sprite);
   }
 
+  /** Tints the sprite, e.g. pale for echoes or a suit colour; null restores it. */
+  setLook(tint: string | null, opacity = 1) {
+    this.sprite.material.color.set(tint ?? '#ffffff');
+    this.sprite.material.transparent = opacity < 1;
+    this.sprite.material.opacity = opacity;
+    this.sprite.material.alphaTest = opacity < 1 ? .1 : .5;
+    this.shadow.material.opacity = .32 * opacity;
+  }
+
+  setVisible(visible: boolean) {
+    this.sprite.visible = this.shadow.visible = visible;
+  }
+
   update(dt: number) {
     const { x, y, z, vx, vz, facing } = this.body;
     const speed = Math.hypot(vx, vz);

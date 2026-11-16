@@ -6,6 +6,8 @@ import { expedition } from '../src/world/expedition-layout';
 import { freshSave } from '../src/systems/save';
 import { chapter, coastEpilogue, codaOptions, codaTitles, endings, hotspots, objectiveTexts } from '../src/world/story';
 import { sceneEvents } from '../src/world/events';
+import { levels as loopLevels } from '../src/loop/levels';
+import { rooms, suits } from '../src/loop/progress';
 
 export function storyStrings() {
   const out = new Set<string>();
@@ -33,6 +35,9 @@ export function storyStrings() {
   objectiveTexts.forEach(add);
   for (const area of Object.values(expedition)) { add(area.title); add(area.title.toUpperCase()); add(area.subtitle); }
   for (const entry of Object.values(achievementList)) { add(entry.title); add(entry.text); }
+  for (const level of loopLevels) { add(level.name); add(level.intro); }
+  for (const room of rooms) { add(room.title); add(room.story); }
+  Object.keys(suits).forEach(add);
   for (const event of sceneEvents) {
     for (const [, cue] of event.cues) {
       if ('text' in cue) add(cue.text);

@@ -131,6 +131,15 @@ export class SceneEffects {
     }
   }
 
+  /** Hides or shows everything this class draws (Loop mode uses its own scene). */
+  setVisible(visible: boolean) {
+    for (const item of [this.flashlight, this.beam, this.waypoint, this.figure, this.prints, this.ghost, this.apparition, this.trail, ...this.breath, ...this.tideWater]) {
+      item.visible = visible && item.visible;
+    }
+    this.hidden = !visible;
+  }
+  hidden = false;
+
   /** Lays a fresh line of bootprints between two points (empty clears it). */
   layTrail(points: GroundPoint[]) {
     let count = 0;
