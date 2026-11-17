@@ -307,4 +307,7 @@
   .loop-actions button { min-height: 50px; font-size: 9px; padding: 0 6px; }
 }
 
-.loop-pad button i { display: inline-block; font-style: normal; font-size: 22px; color: #e3bd9a; transform: rotate(var(--turn)); }
+/* A drawn chevron (not a font glyph): its corner points up-left, then turns to its direction. */
+.loop-pad button i { display: inline-block; width: 16px; height: 16px; border-top: 4px solid #e3bd9a; border-left: 4px solid #e3bd9a; transform: translate(2px, 2px) rotate(var(--turn)); }
+#loopMessage { transition: opacity .6s; }
+#loopMessage.faded { opacity: 0; }

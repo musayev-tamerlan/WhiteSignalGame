@@ -70,6 +70,13 @@ export class LoopMode {
   private clock = 0;
   private returnTo: Screen = 'select';
   private swipe?: { x: number; y: number };
+  /** Bumped on every reset, so delayed callbacks from an earlier attempt never fire on a new one. */
+  private generation = 0;
+
+  private later(ms: number, run: () => void) {
+    const generation = this.generation;
+    setTimeout(() => { if (this.active && generation === this.generation) run(); }, ms);
+  }
 
   constructor(private readonly deps: LoopDeps) {
     deps.scene.add(this.group, this.hintMarks);
@@ -300,6 +307,8 @@ export class LoopMode {
   private get maxLoops() { return (this.level?.loops ?? 1) + 1; }
 
   private reset() {
+    this.generation++;
+    this.busyUntil = 0;
     this.sim = initial(this.board!, this.echoes.length + 1);
     this.previous = this.sim;
     this.current = '';
@@ -323,11 +332,11 @@ export class LoopMode {
     this.refresh(result.events);
     this.hud();
     const player = this.sim.vosses[this.sim.vosses.length - 1];
-    if (this.sim.won) { setTimeout(() => this.finish(), 550); return; }
+    if (this.sim.won) { this.later(550, () => this.finish()); return; }
     if (!player.alive) {
       this.message(t('It caught you. This loop starts over; your past selves keep their steps.'));
       this.busyUntil = this.clock + 1.1;
-      setTimeout(() => { if (this.active && this.level) this.reset(); }, 1000);
+      this.later(1000, () => this.reset());
       return;
     }
     if (this.sim.t >= this.level!.steps) this.timeUp();
@@ -338,7 +347,7 @@ export class LoopMode {
       this.message(t('03:14. The loop closes — and you are back at the start, beside yourself.'));
       this.deps.audio.stinger();
       this.busyUntil = this.clock + 1;
-      setTimeout(() => { if (this.active) this.closeLoop(true); }, 900);
+      this.later(900, () => this.closeLoop(true));
     } else {
       this.message(t('03:14 and no more loops. Undo a loop or start the signal again.'));
     }
@@ -400,8 +409,14 @@ export class LoopMode {
     if (!this.deps.audio.muted && this.deps.settings.voice) this.deps.voice.speak(speaker, t(text), this.deps.settings.language);
   }
 
+  private messageTimer?: ReturnType<typeof setTimeout>;
+
   private message(text: string) {
     el('loopMessage').textContent = text;
+    el('loopMessage').classList.remove('faded');
+    // Messages fade after a while so they don't cover the board on small screens.
+    clearTimeout(this.messageTimer);
+    this.messageTimer = setTimeout(() => el('loopMessage').classList.add('faded'), 5000);
     el('loopMessage').classList.remove('pulse');
     void el('loopMessage').offsetWidth;
     el('loopMessage').classList.add('pulse');

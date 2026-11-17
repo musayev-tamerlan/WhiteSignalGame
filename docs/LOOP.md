@@ -40,5 +40,6 @@ Open it from the title menu (**◈ LOOP**). A link with `#loop=<code>` opens a s
 2. Add its name and intro to `src/i18n/ru.ts`.
 3. Run `npm test`: it proves the last loop is solvable with your plan and **impossible with fewer loops**, so every level really needs its past selves.
 4. In the dev console, `await import('/WhiteSignalGame/scripts/loop-check.js'); await loopCheck()` plays every level with real key events.
+5. `await import('/WhiteSignalGame/scripts/loop-suite.js'); await loopSuite()` runs 21 interaction checks: restart, undo, time-outs, hints, captures, decoys, streaks, sharing, the station, share codes, swipes, the pad and the gamepad.
 
 Controls: arrows/WASD move along the isometric axes (↗ ↘ ↙ ↖), Space waits, Enter closes the loop, Backspace undoes it, R restarts, H hints. On touch: swipe on the board or use the pad. Gamepad: stick or D-pad to move, A wait, B close loop, Start for the level list.
